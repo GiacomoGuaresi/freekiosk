@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 📊 **Dashboard Mode**: New display mode that shows a configurable grid of URL tiles instead of a single WebView. Users can create tiles with custom names and URLs, each automatically assigned a distinct color. Tapping a tile opens its URL in the WebView with a navigation bar (back/forward/refresh/home). Configurable in Settings → Dashboard tab
+
+### Fixed
+- 🔄 **Inactivity Return now works in Dashboard Mode**: Previously, enabling "Inactivity Return" with Dashboard Mode had no effect because the feature required a base URL (which is empty in dashboard mode). Now correctly returns to the dashboard grid after the configured timeout
+- 🔄 **URL Planner return to dashboard grid**: When a scheduled planner event ended while in Dashboard Mode, the app did not return to the dashboard grid due to a stale closure in the planner callback. Fixed by using a ref to track the active event
 - 📱 **Multi-App Mode** (#67): External App mode now supports managing multiple apps. Add apps from the new "Managed Apps" section in General settings — each app appears on a home screen grid with icon circles. All managed apps are automatically whitelisted in Lock Task Mode, so users can switch between them without escaping the kiosk. The primary app (single package) still works exactly as before for backward compatibility
 - 🚀 **Launch App on Boot** (#37): Managed apps with "Launch on Boot" enabled are automatically started in the background when the device boots, before FreeKiosk's own UI loads. Combined with "Keep Alive", apps can be maintained as persistent background services
 - 💓 **Keep Alive Background Monitor** (#37): New `BackgroundAppMonitorService` foreground service checks every 30 seconds (via `UsageStatsManager`) if managed apps with "Keep Alive" enabled are still running, and relaunches them if they've stopped or crashed. Starts automatically on boot when at least one keep-alive app is configured

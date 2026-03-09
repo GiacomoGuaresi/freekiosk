@@ -37,6 +37,7 @@ import {
   DisplayTab,
   SecurityTab,
   AdvancedTab,
+  DashboardTab,
 } from './tabs';
 import { RecurringEventEditor, OneTimeEventEditor } from '../../components/settings';
 import ScreenScheduleRuleEditor from '../../components/settings/ScreenScheduleRuleEditor';
@@ -58,6 +59,7 @@ import Icon, { IconName, IconMap } from '../../components/Icon';
 // Tab configuration
 const TABS: { id: string; label: string; icon: IconName }[] = [
   { id: 'general', label: 'General', icon: 'home' },
+  { id: 'dashboard', label: 'Dashboard', icon: 'view-dashboard' },
   { id: 'display', label: 'Display', icon: 'monitor' },
   { id: 'security', label: 'Security', icon: 'shield-lock' },
   { id: 'advanced', label: 'Advanced', icon: 'cog' },
@@ -87,6 +89,9 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const [screensaverBrightness, setScreensaverBrightness] = useState<number>(0);
   const [defaultBrightness, setDefaultBrightness] = useState<number>(0.5);
   const [certificates, setCertificates] = useState<CertificateInfo[]>([]);
+
+  // Dashboard states
+  const [dashboardModeEnabled, setDashboardModeEnabled] = useState<boolean>(false);
 
   // External app states
   const [displayMode, setDisplayMode] = useState<'webview' | 'external_app'>('webview');
@@ -526,6 +531,9 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
     const savedPdfViewerEnabled = await StorageService.getPdfViewerEnabled();
     setPdfViewerEnabled(savedPdfViewerEnabled);
 
+    // Dashboard settings
+    const savedDashboardModeEnabled = await StorageService.getDashboardModeEnabled();
+    setDashboardModeEnabled(savedDashboardModeEnabled);
     // WebView Zoom Level
     const savedZoomLevel = await StorageService.getWebViewZoomLevel();
     setZoomLevel(savedZoomLevel);
@@ -866,7 +874,7 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
   const handleSave = async (): Promise<void> => {
     // Validation
-    if (displayMode === 'webview' && !url) {
+    if (displayMode === 'webview' && !url && !dashboardModeEnabled) {
       Alert.alert('Error', 'Please enter a URL');
       return;
     }
@@ -906,7 +914,7 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
     // URL validation for webview
     let finalUrl = url.trim();
-    if (displayMode === 'webview') {
+    if (displayMode === 'webview' && !dashboardModeEnabled) {
       const urlLower = finalUrl.toLowerCase();
       if (urlLower.startsWith('file://') || urlLower.startsWith('javascript:') || urlLower.startsWith('data:')) {
         Alert.alert('Security Error', 'This type of URL is not allowed. Use http:// or https://');
@@ -1053,6 +1061,9 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
     await StorageService.saveReturnButtonPosition(returnButtonPosition);
     await StorageService.saveVolumeUp5TapEnabled(volumeUp5TapEnabled);
     
+    // Save Dashboard settings
+    await StorageService.saveDashboardModeEnabled(dashboardModeEnabled);
+
     // Save URL Rotation settings (webview only)
     if (displayMode === 'webview') {
       await StorageService.saveUrlRotationEnabled(urlRotationEnabled);
@@ -1344,6 +1355,8 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
             onDisplayModeChange={handleDisplayModeChange}
             url={url}
             onUrlChange={setUrl}
+            dashboardModeEnabled={dashboardModeEnabled}
+            onDashboardModeEnabledChange={setDashboardModeEnabled}
             externalAppPackage={externalAppPackage}
             onExternalAppPackageChange={setExternalAppPackage}
             onPickApp={loadInstalledApps}
@@ -1433,6 +1446,13 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
           />
         );
       
+      case 'dashboard':
+        return (
+          <DashboardTab
+            dashboardModeEnabled={dashboardModeEnabled}
+          />
+        );
+
       case 'display':
         return (
           <DisplayTab
