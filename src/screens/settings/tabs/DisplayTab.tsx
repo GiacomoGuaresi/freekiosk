@@ -18,7 +18,7 @@ import { Colors, Spacing, Typography } from '../../../theme';
 import { ScreenScheduleRule } from '../../../types/screenScheduler';
 
 interface DisplayTabProps {
-  displayMode: 'webview' | 'external_app';
+  displayMode: 'webview' | 'external_app' | 'media_player';
   
   // Brightness management (allow system to manage)
   brightnessManagementEnabled: boolean;
@@ -171,7 +171,7 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
   return (
     <View>
       {/* App Brightness Control toggle - WebView mode only (external app mode doesn't manage brightness) */}
-      {displayMode === 'webview' && (
+      {displayMode !== 'external_app' && (
         <SettingsSection title="Brightness Control" icon="brightness-6">
           <SettingsSwitch
             label="App Brightness Control"
@@ -192,7 +192,7 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
       )}
 
       {/* Default Brightness - Only in WebView mode and when app manages brightness */}
-      {displayMode === 'webview' && brightnessManagementEnabled && (
+      {displayMode !== 'external_app' && brightnessManagementEnabled && (
         <SettingsSection title="Manual Brightness" icon="brightness-6">
           <SettingsSlider
             label=""
@@ -217,7 +217,7 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
       )}
       
       {/* Auto-Brightness - WebView only, and only when app manages brightness */}
-      {displayMode === 'webview' && brightnessManagementEnabled && (
+      {displayMode !== 'external_app' && brightnessManagementEnabled && (
         <SettingsSection title="Auto-Brightness" icon="brightness-auto">
           <SettingsSwitch
             label="Enable Auto-Brightness"
@@ -278,7 +278,7 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
       )}
       
       {/* Screen Always On - WebView mode only (external app mode: system manages screen) */}
-      {displayMode === 'webview' && (
+      {displayMode !== 'external_app' && (
       <SettingsSection title="Screen Always On" icon="monitor">
         <SettingsSwitch
           label="Keep Screen On"
@@ -301,7 +301,7 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
       )}
       
       {/* Screensaver - WebView only, and only when keepScreenOn is enabled */}
-      {displayMode === 'webview' && keepScreenOn && (
+      {displayMode !== 'external_app' && keepScreenOn && (
         <SettingsSection title="Screensaver" icon="weather-night">
           <SettingsSwitch
             label="Enable Screensaver"
@@ -596,10 +596,10 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
               </View>
             )}
             
-            {displayMode === 'webview' && (
+            {(displayMode === 'webview' || displayMode === 'media_player') && (
               <SettingsInfoBox variant="info">
                 <Text style={styles.infoText}>
-                  WebView mode: Status bar appears above the web content
+                  {displayMode === 'webview' ? 'WebView' : 'Media Player'} mode: Status bar appears above the web content
                 </Text>
               </SettingsInfoBox>
             )}

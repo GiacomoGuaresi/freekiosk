@@ -147,6 +147,7 @@ class OverlayService : Service() {
     private val foregroundMonitorHandler = Handler(Looper.getMainLooper())
     private val FOREGROUND_CHECK_INTERVAL = 5000L // Check every 5 seconds (was 2s, reduced for low-end device performance)
     private var cachedLauncherPackages: Set<String>? = null // Cached list of launcher packages for Home detection
+    private var cachedManagedPackages: Set<String>? = null // Cached list of managed app packages (keep-alive, etc.)
     // BroadcastReceiver pour détecter quand l'écran s'allume
     private val screenReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -1078,23 +1079,13 @@ class OverlayService : Service() {
 
     private fun sendNavigateToPinEvent() {
         try {
-            val reactApplication = applicationContext as? ReactApplication
-            val reactNativeHost = reactApplication?.reactNativeHost
-            val reactContext = reactNativeHost?.reactInstanceManager?.currentReactContext
-            
-            if (reactContext != null) {
-                // Envoyer voluntary=true pour éviter le relaunch
-                val params = Arguments.createMap()
-                params.putBoolean("voluntary", true)
-                reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    ?.emit("onAppReturned", params)
-                
-                // Envoyer aussi navigateToPin pour aller directement au PIN
-                reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-                    ?.emit("navigateToPin", null)
-                    
-                DebugLog.d("OverlayService", "Sent voluntary return + navigateToPin events")
-            }
+            // Use KioskModule.sendEventFromNative() which works with New Architecture
+            // (direct ReactNativeHost access fails: "should not use ReactNativeHost directly")
+            val params = Arguments.createMap()
+            params.putBoolean("voluntary", true)
+            KioskModule.sendEventFromNative("onAppReturned", params)
+            KioskModule.sendEventFromNative("navigateToPin", null)
+            DebugLog.d("OverlayService", "Sent voluntary return + navigateToPin events via KioskModule")
         } catch (e: Exception) {
             DebugLog.errorProduction("OverlayService", "Failed to send events: ${e.message}")
         }
@@ -1148,6 +1139,12 @@ class OverlayService : Service() {
             
             // Correct app in foreground - nothing to do
             if (topPackage == lockedPackage || topPackage == packageName) {
+                return
+            }
+            
+            // Ignore managed background apps (keep-alive, launchOnBoot, etc.)
+            // These apps may appear as "top" in UsageStats even though they run in background
+            if (isManagedAppPackage(topPackage)) {
                 return
             }
             
@@ -1224,6 +1221,59 @@ class OverlayService : Service() {
             android.util.Log.d("OverlayService", "Cached launcher packages: $cachedLauncherPackages")
         }
         return cachedLauncherPackages?.contains(pkg) == true
+    }
+
+    /**
+     * Check if a package is a managed app (configured in FreeKiosk managed apps list).
+     * These are background apps (keep-alive, launchOnBoot) that may appear as "top" in
+     * UsageStats but should NOT trigger a relaunch of FreeKiosk.
+     * Results are cached and refreshed every 5 minutes.
+     */
+    private var managedPackagesCacheTime = 0L
+    private val MANAGED_CACHE_TTL = 300_000L // 5 minutes
+    
+    private fun isManagedAppPackage(pkg: String): Boolean {
+        val now = System.currentTimeMillis()
+        if (cachedManagedPackages == null || now - managedPackagesCacheTime > MANAGED_CACHE_TTL) {
+            cachedManagedPackages = readManagedAppPackages()
+            managedPackagesCacheTime = now
+        }
+        return cachedManagedPackages?.contains(pkg) == true
+    }
+    
+    /**
+     * Read all managed app package names from AsyncStorage.
+     */
+    private fun readManagedAppPackages(): Set<String> {
+        return try {
+            val dbPath = getDatabasePath("RKStorage").absolutePath
+            val db = android.database.sqlite.SQLiteDatabase.openDatabase(dbPath, null, android.database.sqlite.SQLiteDatabase.OPEN_READONLY)
+            val cursor = db.rawQuery(
+                "SELECT value FROM catalystLocalStorage WHERE key = ?",
+                arrayOf("@kiosk_managed_apps")
+            )
+            val result = if (cursor.moveToFirst()) {
+                val json = cursor.getString(0) ?: "[]"
+                val apps = org.json.JSONArray(json)
+                val packages = mutableSetOf<String>()
+                for (i in 0 until apps.length()) {
+                    val app = apps.getJSONObject(i)
+                    packages.add(app.getString("packageName"))
+                }
+                packages
+            } else {
+                emptySet()
+            }
+            cursor.close()
+            db.close()
+            if (result.isNotEmpty()) {
+                android.util.Log.d("OverlayService", "Cached managed app packages: $result")
+            }
+            result
+        } catch (e: Exception) {
+            DebugLog.d("OverlayService", "Could not read managed apps: ${e.message}")
+            emptySet()
+        }
     }
 
     /**

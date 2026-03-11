@@ -3,6 +3,7 @@ import { BlockingRegion } from '../types/blockingOverlay';
 import { ScreenScheduleRule } from '../types/screenScheduler';
 import { DashboardTile } from '../types/dashboard';
 import { ManagedApp } from '../types/managedApps';
+import { MediaItem, MediaFitMode } from '../types/mediaPlayer';
 import { saveSecureApiKey, getSecureApiKey, clearSecureApiKey, clearSecureMqttPassword } from './secureStorage';
 
 const KEYS = {
@@ -118,6 +119,18 @@ const KEYS = {
   BETA_UPDATES_ENABLED: '@kiosk_beta_updates_enabled',
   // Managed Apps (multi-app mode, background apps, accessibility whitelist)
   MANAGED_APPS: '@kiosk_managed_apps',
+  // Media Player
+  MEDIA_PLAYER_ITEMS: '@kiosk_media_player_items',
+  MEDIA_PLAYER_AUTOPLAY: '@kiosk_media_player_autoplay',
+  MEDIA_PLAYER_LOOP: '@kiosk_media_player_loop',
+  MEDIA_PLAYER_SHUFFLE: '@kiosk_media_player_shuffle',
+  MEDIA_PLAYER_IMAGE_DURATION: '@kiosk_media_player_image_duration',
+  MEDIA_PLAYER_SHOW_CONTROLS: '@kiosk_media_player_show_controls',
+  MEDIA_PLAYER_FIT_MODE: '@kiosk_media_player_fit_mode',
+  MEDIA_PLAYER_BG_COLOR: '@kiosk_media_player_bg_color',
+  MEDIA_PLAYER_TRANSITION: '@kiosk_media_player_transition',
+  MEDIA_PLAYER_TRANSITION_DURATION: '@kiosk_media_player_transition_duration',
+  MEDIA_PLAYER_MUTE: '@kiosk_media_player_mute',
   // Legacy keys for backward compatibility
   SCREENSAVER_DELAY: '@screensaver_delay',
   MOTION_DETECTION_ENABLED: '@motion_detection_enabled',
@@ -601,7 +614,7 @@ export const StorageService = {
   },
 
   //DISPLAY MODE
-  saveDisplayMode: async (mode: 'webview' | 'external_app'): Promise<void> => {
+  saveDisplayMode: async (mode: 'webview' | 'external_app' | 'media_player'): Promise<void> => {
     try {
       await AsyncStorage.setItem(KEYS.DISPLAY_MODE, mode);
     } catch (error) {
@@ -609,10 +622,11 @@ export const StorageService = {
     }
   },
 
-  getDisplayMode: async (): Promise<'webview' | 'external_app'> => {
+  getDisplayMode: async (): Promise<'webview' | 'external_app' | 'media_player'> => {
     try {
       const value = await AsyncStorage.getItem(KEYS.DISPLAY_MODE);
-      return value === 'external_app' ? 'external_app' : 'webview'; // Par défaut 'webview'
+      if (value === 'external_app' || value === 'media_player') return value;
+      return 'webview'; // Par défaut 'webview'
     } catch (error) {
       console.error('Error getting display mode:', error);
       return 'webview';
@@ -2079,6 +2093,207 @@ export const StorageService = {
    * This is much faster than 50+ sequential getItem calls (single bridge crossing).
    * Returns a Map for O(1) key lookup.
    */
+
+  // MEDIA PLAYER
+  saveMediaPlayerItems: async (items: MediaItem[]): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_ITEMS, JSON.stringify(items));
+    } catch (error) {
+      console.error('Error saving media player items:', error);
+    }
+  },
+
+  getMediaPlayerItems: async (): Promise<MediaItem[]> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_ITEMS);
+      return value ? JSON.parse(value) : [];
+    } catch (error) {
+      console.error('Error getting media player items:', error);
+      return [];
+    }
+  },
+
+  saveMediaPlayerAutoPlay: async (value: boolean): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_AUTOPLAY, JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving media player autoplay:', error);
+    }
+  },
+
+  getMediaPlayerAutoPlay: async (): Promise<boolean> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_AUTOPLAY);
+      return value !== null ? JSON.parse(value) : true;
+    } catch (error) {
+      console.error('Error getting media player autoplay:', error);
+      return true;
+    }
+  },
+
+  saveMediaPlayerLoop: async (value: boolean): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_LOOP, JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving media player loop:', error);
+    }
+  },
+
+  getMediaPlayerLoop: async (): Promise<boolean> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_LOOP);
+      return value !== null ? JSON.parse(value) : true;
+    } catch (error) {
+      console.error('Error getting media player loop:', error);
+      return true;
+    }
+  },
+
+  saveMediaPlayerShuffle: async (value: boolean): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_SHUFFLE, JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving media player shuffle:', error);
+    }
+  },
+
+  getMediaPlayerShuffle: async (): Promise<boolean> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_SHUFFLE);
+      return value !== null ? JSON.parse(value) : false;
+    } catch (error) {
+      console.error('Error getting media player shuffle:', error);
+      return false;
+    }
+  },
+
+  saveMediaPlayerImageDuration: async (value: number): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_IMAGE_DURATION, String(value));
+    } catch (error) {
+      console.error('Error saving media player image duration:', error);
+    }
+  },
+
+  getMediaPlayerImageDuration: async (): Promise<number> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_IMAGE_DURATION);
+      return value !== null ? parseInt(value, 10) : 10;
+    } catch (error) {
+      console.error('Error getting media player image duration:', error);
+      return 10;
+    }
+  },
+
+  saveMediaPlayerShowControls: async (value: boolean): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_SHOW_CONTROLS, JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving media player show controls:', error);
+    }
+  },
+
+  getMediaPlayerShowControls: async (): Promise<boolean> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_SHOW_CONTROLS);
+      return value !== null ? JSON.parse(value) : false;
+    } catch (error) {
+      console.error('Error getting media player show controls:', error);
+      return false;
+    }
+  },
+
+  saveMediaPlayerFitMode: async (value: MediaFitMode): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_FIT_MODE, value);
+    } catch (error) {
+      console.error('Error saving media player fit mode:', error);
+    }
+  },
+
+  getMediaPlayerFitMode: async (): Promise<MediaFitMode> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_FIT_MODE);
+      if (value === 'cover' || value === 'fill' || value === 'contain') return value;
+      return 'contain';
+    } catch (error) {
+      console.error('Error getting media player fit mode:', error);
+      return 'contain';
+    }
+  },
+
+  saveMediaPlayerBgColor: async (value: string): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_BG_COLOR, value);
+    } catch (error) {
+      console.error('Error saving media player bg color:', error);
+    }
+  },
+
+  getMediaPlayerBgColor: async (): Promise<string> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_BG_COLOR);
+      return value || '#000000';
+    } catch (error) {
+      console.error('Error getting media player bg color:', error);
+      return '#000000';
+    }
+  },
+
+  saveMediaPlayerTransition: async (value: boolean): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_TRANSITION, JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving media player transition:', error);
+    }
+  },
+
+  getMediaPlayerTransition: async (): Promise<boolean> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_TRANSITION);
+      return value !== null ? JSON.parse(value) : true;
+    } catch (error) {
+      console.error('Error getting media player transition:', error);
+      return true;
+    }
+  },
+
+  saveMediaPlayerTransitionDuration: async (value: number): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_TRANSITION_DURATION, String(value));
+    } catch (error) {
+      console.error('Error saving media player transition duration:', error);
+    }
+  },
+
+  getMediaPlayerTransitionDuration: async (): Promise<number> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_TRANSITION_DURATION);
+      return value !== null ? parseInt(value, 10) : 500;
+    } catch (error) {
+      console.error('Error getting media player transition duration:', error);
+      return 500;
+    }
+  },
+
+  saveMediaPlayerMute: async (value: boolean): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.MEDIA_PLAYER_MUTE, JSON.stringify(value));
+    } catch (error) {
+      console.error('Error saving media player mute:', error);
+    }
+  },
+
+  getMediaPlayerMute: async (): Promise<boolean> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.MEDIA_PLAYER_MUTE);
+      return value !== null ? JSON.parse(value) : false;
+    } catch (error) {
+      console.error('Error getting media player mute:', error);
+      return false;
+    }
+  },
+
   // DASHBOARD
   saveDashboardModeEnabled: async (value: boolean): Promise<void> => {
     try {

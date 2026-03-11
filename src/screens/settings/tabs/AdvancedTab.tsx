@@ -20,7 +20,7 @@ import { Colors, Spacing, Typography } from '../../../theme';
 const { KioskModule } = NativeModules;
 
 interface AdvancedTabProps {
-  displayMode: 'webview' | 'external_app';
+  displayMode: 'webview' | 'external_app' | 'media_player';
   isDeviceOwner: boolean;
   
   // Version & updates
@@ -95,7 +95,9 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
 
   const handleOpenAccessibilitySettings = async () => {
     try {
-      await AccessibilityModule.openAccessibilitySettings();
+      // Use KioskModule.openAndroidSettings which properly handles Lock Task Mode
+      // (temporarily exits lock task before launching the settings intent)
+      await KioskModule.openAndroidSettings('accessibility');
     } catch (e: any) {
       Alert.alert('Error', 'Could not open Accessibility Settings');
     }
@@ -108,7 +110,17 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
       setTimeout(checkAccessibilityStatus, 1000);
       Alert.alert('Success', 'Accessibility Service has been enabled automatically via Device Owner.');
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to enable via Device Owner');
+      if (e.code === 'WRITE_SECURE_SETTINGS_REQUIRED') {
+        Alert.alert(
+          'Permission Required',
+          'To auto-enable the Accessibility Service, the WRITE_SECURE_SETTINGS permission must be granted via ADB (one-time setup):\n\n' +
+          'adb shell pm grant com.freekiosk android.permission.WRITE_SECURE_SETTINGS\n\n' +
+          'Alternatively, tap "Open Accessibility Settings" below to enable it manually.',
+          [{ text: 'OK' }],
+        );
+      } else {
+        Alert.alert('Error', e.message || 'Failed to enable via Device Owner');
+      }
     }
   };
   return (
@@ -257,7 +269,7 @@ const AdvancedTab: React.FC<AdvancedTabProps> = ({
             />
             <Text style={styles.hint}>
               {isDeviceOwner
-                ? 'Device Owner mode can enable the service automatically, or you can enable it manually in Android settings.'
+                ? 'Device Owner mode can enable the service automatically if the WRITE_SECURE_SETTINGS permission has been granted via ADB. Otherwise, enable it manually in Android settings.'
                 : 'Enable "FreeKiosk" in Settings → Accessibility → Installed Services.'}
             </Text>
           </>

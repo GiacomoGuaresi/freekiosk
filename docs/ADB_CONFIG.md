@@ -366,6 +366,9 @@ sleep 2
 echo "� Granting Usage Stats permission (required for foreground monitoring)..."
 adb shell appops set com.freekiosk android:get_usage_stats allow
 
+echo "🔑 Granting WRITE_SECURE_SETTINGS (required for auto-enabling accessibility service)..."
+adb shell pm grant com.freekiosk android.permission.WRITE_SECURE_SETTINGS
+
 echo "�📱 Configuring FreeKiosk..."
 adb shell am start -n com.freekiosk/.MainActivity \
     --es lock_package "$PACKAGE" \
@@ -400,6 +403,9 @@ Start-Sleep -Seconds 2
 
 Write-Host "� Granting Usage Stats permission..."
 adb shell appops set com.freekiosk android:get_usage_stats allow
+
+Write-Host "🔑 Granting WRITE_SECURE_SETTINGS..."
+adb shell pm grant com.freekiosk android.permission.WRITE_SECURE_SETTINGS
 
 Write-Host "�📱 Configuring FreeKiosk..."
 # Note: JSON escaping in PowerShell is complex, use individual parameters
@@ -471,6 +477,18 @@ adb logcat -s "FreeKiosk-ADB"
 ```
 
 **Note**: Device Owner can only be set on a freshly reset device or during initial setup. Once set, all permissions are managed automatically.
+
+### Accessibility Service: "Permission denial: WRITE_SECURE_SETTINGS"
+
+**Cause**: The `WRITE_SECURE_SETTINGS` permission is required to programmatically enable the Accessibility Service. Being a Device Owner alone does **not** grant this permission automatically.
+
+**Solution**: Grant the permission via ADB (one-time):
+```bash
+adb shell pm grant com.freekiosk android.permission.WRITE_SECURE_SETTINGS
+```
+After granting, tap "Enable Automatically (Device Owner)" in Settings → Advanced → Accessibility Service. The permission persists across reboots.
+
+Alternatively, you can enable the Accessibility Service manually: Settings → Accessibility → Installed Services → FreeKiosk.
 
 ### Nothing happens
 

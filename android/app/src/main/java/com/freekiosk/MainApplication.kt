@@ -32,6 +32,7 @@ class MainApplication : Application(), ReactApplication {
           add(AutoBrightnessPackage())
           add(PrintPackage())
           add(AccessibilityPackage())
+          add(FilePickerPackage())
         },
     )
   }

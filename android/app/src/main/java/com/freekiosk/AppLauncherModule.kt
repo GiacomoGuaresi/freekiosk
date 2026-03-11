@@ -311,7 +311,10 @@ class AppLauncherModule(reactContext: ReactApplicationContext) : ReactContextBas
                         pm.getPackageInfo(packageName, 0)
                         val launchIntent = pm.getLaunchIntentForPackage(packageName)
                         if (launchIntent != null) {
-                            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            launchIntent.addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_NO_ANIMATION
+                            )
                             reactApplicationContext.startActivity(launchIntent)
                             launchedCount++
                             DebugLog.d("AppLauncherModule", "Boot app launched: $packageName")
@@ -332,7 +335,8 @@ class AppLauncherModule(reactContext: ReactApplicationContext) : ReactContextBas
                         bringBackIntent.addFlags(
                             Intent.FLAG_ACTIVITY_NEW_TASK or
                             Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                            Intent.FLAG_ACTIVITY_NO_ANIMATION
                         )
                         reactApplicationContext.startActivity(bringBackIntent)
                         DebugLog.d("AppLauncherModule", "FreeKiosk brought back to front after $launchedCount boot app(s)")
@@ -354,13 +358,22 @@ class AppLauncherModule(reactContext: ReactApplicationContext) : ReactContextBas
     @ReactMethod
     fun startBackgroundMonitor(promise: Promise) {
         try {
+            // Pre-check: only start the foreground service if there are keep-alive apps
+            // This avoids the ForegroundServiceDidNotStartInTimeException crash
+            val keepAliveApps = getManagedAppsFiltered { it.optBoolean("keepAlive", false) }
+            if (keepAliveApps.isEmpty()) {
+                DebugLog.d("AppLauncherModule", "No keep-alive apps configured, skipping BackgroundAppMonitorService")
+                promise.resolve(false)
+                return
+            }
+
             val serviceIntent = Intent(reactApplicationContext, BackgroundAppMonitorService::class.java)
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 reactApplicationContext.startForegroundService(serviceIntent)
             } else {
                 reactApplicationContext.startService(serviceIntent)
             }
-            DebugLog.d("AppLauncherModule", "BackgroundAppMonitorService started from JS")
+            DebugLog.d("AppLauncherModule", "BackgroundAppMonitorService started from JS for ${keepAliveApps.size} keep-alive app(s)")
             promise.resolve(true)
         } catch (e: Exception) {
             DebugLog.errorProduction("AppLauncherModule", "Failed to start BackgroundAppMonitorService: ${e.message}")

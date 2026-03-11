@@ -14,45 +14,126 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == Intent.ACTION_BOOT_COMPLETED ||
             intent.action == "android.intent.action.QUICKBOOT_POWERON" ||
-            intent.action == "android.intent.action.REBOOT") {
+            intent.action == "android.intent.action.REBOOT" ||
+            intent.action == Intent.ACTION_LOCKED_BOOT_COMPLETED) {
             
             DebugLog.d("BootReceiver", "Boot detected: ${intent.action}")
             
             // Re-enable accessibility service if Device Owner (includes managed apps whitelist)
             reEnableAccessibilityIfDeviceOwner(context)
             
-            // Add delay to ensure system is ready (important for Android 9)
-            Handler(Looper.getMainLooper()).postDelayed({
-                // Check if auto-launch is enabled in settings before launching
-                if (!isAutoLaunchEnabled(context)) {
-                    DebugLog.d("BootReceiver", "Auto-launch is disabled, not starting app")
-                    return@postDelayed
-                }
-                
-                DebugLog.d("BootReceiver", "Auto-launch is enabled, starting app")
-                
-                // Launch background apps (launchOnBoot=true) before launching FreeKiosk
-                launchBackgroundApps(context)
-                
-                // Give boot apps a moment to initialize before FreeKiosk takes foreground
-                Thread.sleep(1000)
-                
-                // Launch the app on startup (FreeKiosk will be on top)
-                val launchIntent = Intent(context, MainActivity::class.java)
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                
+            // Check if auto-launch is enabled before doing anything else
+            if (!isAutoLaunchEnabled(context)) {
+                DebugLog.d("BootReceiver", "Auto-launch is disabled, not starting app")
+                return
+            }
+
+            // ── #98 fix: launch BootLockActivity IMMEDIATELY if Device Owner + kiosk ──
+            // This locks the device in < 1 second, before React Native loads.
+            // BootLockActivity will then launch MainActivity itself.
+            if (shouldUseFastBootLock(context)) {
+                DebugLog.d("BootReceiver", "Fast boot-lock: launching BootLockActivity")
                 try {
-                    context.startActivity(launchIntent)
-                    DebugLog.d("BootReceiver", "Successfully launched MainActivity")
+                    val lockIntent = Intent(context, BootLockActivity::class.java)
+                    lockIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    context.startActivity(lockIntent)
                 } catch (e: Exception) {
-                    DebugLog.errorProduction("BootReceiver", "Failed to launch app: ${e.message}")
+                    DebugLog.errorProduction("BootReceiver", "BootLockActivity failed, falling back: ${e.message}")
+                    // Fall through to legacy path below
+                    launchMainActivityLegacy(context)
                 }
-                
-                // Start BackgroundAppMonitorService for keep-alive apps
-                startBackgroundMonitorIfNeeded(context)
-            }, 3000) // 3 second delay to ensure system is ready
+            } else {
+                // Non-Device-Owner path: use the original delayed launch
+                launchMainActivityLegacy(context)
+            }
+
+            // ── #96 fix: start KioskWatchdogService (START_STICKY) ──
+            startKioskWatchdogIfNeeded(context)
+
+            // Start BackgroundAppMonitorService for keep-alive apps
+            startBackgroundMonitorIfNeeded(context)
+        }
+    }
+
+    /**
+     * Determine whether we can use the fast BootLockActivity path.
+     * Requires: Device Owner + kiosk mode enabled.
+     */
+    private fun shouldUseFastBootLock(context: Context): Boolean {
+        return try {
+            val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+            val isDeviceOwner = dpm.isDeviceOwnerApp(context.packageName)
+            val kioskEnabled = isKioskEnabled(context)
+            DebugLog.d("BootReceiver", "Fast boot-lock check: DO=$isDeviceOwner, kiosk=$kioskEnabled")
+            isDeviceOwner && kioskEnabled
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Read kiosk_enabled from AsyncStorage.
+     */
+    private fun isKioskEnabled(context: Context): Boolean {
+        return try {
+            val dbPath = context.getDatabasePath("RKStorage").absolutePath
+            val db = SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READONLY)
+            val cursor = db.rawQuery(
+                "SELECT value FROM catalystLocalStorage WHERE key = ?",
+                arrayOf("@kiosk_enabled"))
+            val enabled = if (cursor.moveToFirst()) cursor.getString(0) == "true" else false
+            cursor.close()
+            db.close()
+            enabled
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Legacy path: delayed launch of MainActivity (for non-Device-Owner installs).
+     */
+    private fun launchMainActivityLegacy(context: Context) {
+        Handler(Looper.getMainLooper()).postDelayed({
+            DebugLog.d("BootReceiver", "Legacy path: launching MainActivity")
+            
+            // Launch background apps (launchOnBoot=true) before launching FreeKiosk
+            launchBackgroundApps(context)
+            
+            // Give boot apps a moment to initialize before FreeKiosk takes foreground
+            Thread.sleep(1000)
+            
+            // Launch the app on startup (FreeKiosk will be on top)
+            val launchIntent = Intent(context, MainActivity::class.java)
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            
+            try {
+                context.startActivity(launchIntent)
+                DebugLog.d("BootReceiver", "Successfully launched MainActivity")
+            } catch (e: Exception) {
+                DebugLog.errorProduction("BootReceiver", "Failed to launch app: ${e.message}")
+            }
+        }, 3000) // 3 second delay to ensure system is ready
+    }
+
+    /**
+     * Start KioskWatchdogService if kiosk mode is enabled (#96).
+     * The service uses START_STICKY so Android restarts it after OOM kills.
+     */
+    private fun startKioskWatchdogIfNeeded(context: Context) {
+        if (!isKioskEnabled(context)) return
+        try {
+            val serviceIntent = Intent(context, KioskWatchdogService::class.java)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                context.startForegroundService(serviceIntent)
+            } else {
+                context.startService(serviceIntent)
+            }
+            DebugLog.d("BootReceiver", "KioskWatchdogService started")
+        } catch (e: Exception) {
+            DebugLog.errorProduction("BootReceiver", "Failed to start KioskWatchdogService: ${e.message}")
         }
     }
     
@@ -89,17 +170,23 @@ class BootReceiver : BroadcastReceiver() {
             if (!currentServices.contains(serviceName)) {
                 val newServices = if (currentServices.isEmpty()) serviceName
                     else "$currentServices:$serviceName"
-                Settings.Secure.putString(
-                    context.contentResolver,
-                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
-                    newServices
-                )
-                Settings.Secure.putString(
-                    context.contentResolver,
-                    Settings.Secure.ACCESSIBILITY_ENABLED,
-                    "1"
-                )
-                DebugLog.d("BootReceiver", "Accessibility service re-enabled after boot")
+                try {
+                    Settings.Secure.putString(
+                        context.contentResolver,
+                        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+                        newServices
+                    )
+                    Settings.Secure.putString(
+                        context.contentResolver,
+                        Settings.Secure.ACCESSIBILITY_ENABLED,
+                        "1"
+                    )
+                    DebugLog.d("BootReceiver", "Accessibility service re-enabled after boot")
+                } catch (se: SecurityException) {
+                    DebugLog.errorProduction("BootReceiver", 
+                        "WRITE_SECURE_SETTINGS not granted — cannot auto-enable accessibility service. " +
+                        "Grant via ADB: adb shell pm grant ${context.packageName} android.permission.WRITE_SECURE_SETTINGS")
+                }
             } else {
                 DebugLog.d("BootReceiver", "Accessibility service already enabled")
             }
@@ -133,7 +220,10 @@ class BootReceiver : BroadcastReceiver() {
                     
                     val launchIntent = pm.getLaunchIntentForPackage(packageName)
                     if (launchIntent != null) {
-                        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        launchIntent.addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_NO_ANIMATION
+                        )
                         context.startActivity(launchIntent)
                         DebugLog.d("BootReceiver", "Boot app launched: $packageName")
                         // Small delay between launches to avoid overwhelming the system
@@ -157,15 +247,20 @@ class BootReceiver : BroadcastReceiver() {
         try {
             val keepAliveApps = getManagedAppsForKeepAlive(context)
             if (keepAliveApps.isEmpty()) {
-                DebugLog.d("BootReceiver", "No keep-alive apps configured")
+                DebugLog.d("BootReceiver", "No keep-alive apps configured, skipping BackgroundAppMonitorService")
                 return
             }
             
             val serviceIntent = Intent(context, BackgroundAppMonitorService::class.java)
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
-            } else {
-                context.startService(serviceIntent)
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent)
+                } else {
+                    context.startService(serviceIntent)
+                }
+            } catch (e: Exception) {
+                DebugLog.errorProduction("BootReceiver", "Failed to start foreground service: ${e.message}")
+                return
             }
             DebugLog.d("BootReceiver", "BackgroundAppMonitorService started for ${keepAliveApps.size} apps")
         } catch (e: Exception) {

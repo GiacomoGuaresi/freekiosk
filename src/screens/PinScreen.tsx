@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, NativeModules } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, NativeModules, BackHandler } from 'react-native';
 import PinInput from '../components/PinInput';
 import { StorageService } from '../utils/storage';
 import { migrateOldPin, hasSecurePin } from '../utils/secureStorage';
@@ -16,13 +16,23 @@ interface PinScreenProps {
 const PinScreen: React.FC<PinScreenProps> = ({ navigation }) => {
   const [storedPin, setStoredPin] = useState<string>('1234');
   const [migrationDone, setMigrationDone] = useState<boolean>(false);
-  const [displayMode, setDisplayMode] = useState<'webview' | 'external_app'>('webview');
+  const [displayMode, setDisplayMode] = useState<'webview' | 'external_app' | 'media_player'>('webview');
   const [externalAppPackage, setExternalAppPackage] = useState<string | null>(null);
 
   useEffect(() => {
     migrateFromOldSystem();
     loadDisplayMode();
   }, []);
+
+  // Block Android back gesture/button on PIN screen to prevent bypassing PIN (#93)
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Navigate back to Kiosk instead of allowing default back behavior
+      navigation.navigate('Kiosk');
+      return true;
+    });
+    return () => backHandler.remove();
+  }, [navigation]);
 
   const loadDisplayMode = async (): Promise<void> => {
     try {
@@ -75,13 +85,15 @@ const PinScreen: React.FC<PinScreenProps> = ({ navigation }) => {
         
         // Start OverlayService BEFORE launching the external app
         const { OverlayServiceModule } = NativeModules;
+        const nfcEnabled = await StorageService.getAllowNotifications();
         await OverlayServiceModule.startOverlayService(
           returnTapCount, 
           returnTapTimeout, 
           returnMode, 
           returnButtonPosition,
           externalAppPackage,
-          autoRelaunch
+          autoRelaunch,
+          nfcEnabled
         );
         console.log('[PinScreen] OverlayService started with auto-relaunch monitoring');
         

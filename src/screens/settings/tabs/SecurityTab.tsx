@@ -18,7 +18,7 @@ import {
 import { Colors, Spacing, Typography } from '../../../theme';
 
 interface SecurityTabProps {
-  displayMode: 'webview' | 'external_app';
+  displayMode: 'webview' | 'external_app' | 'media_player';
   isDeviceOwner: boolean;
   navigation?: any; // Navigation prop for sub-screens
   
@@ -137,7 +137,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({
           </SettingsInfoBox>
         )}
         
-        {kioskEnabled && displayMode === 'webview' && isDeviceOwner && (
+        {kioskEnabled && (displayMode === 'webview' || displayMode === 'media_player') && isDeviceOwner && (
           <SettingsInfoBox variant="info">
             <Text style={styles.infoText}>
               ℹ️ Screen pinning enabled: Only 5-tap gesture + PIN code allows exit
@@ -145,7 +145,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({
           </SettingsInfoBox>
         )}
         
-        {kioskEnabled && displayMode === 'webview' && !isDeviceOwner && (
+        {kioskEnabled && (displayMode === 'webview' || displayMode === 'media_player') && !isDeviceOwner && (
           <SettingsInfoBox variant="warning">
             <Text style={styles.infoText}>
               ⚠️ Without Device Owner, users can exit via Back + Recent Apps gesture. Set FreeKiosk as Device Owner for complete lockdown.
@@ -301,7 +301,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({
           </>
         )}
         
-        {displayMode === 'webview' && (
+        {(displayMode === 'webview' || displayMode === 'media_player') && (
           <>
             <View style={styles.divider} />
             <SettingsSwitch
@@ -501,7 +501,7 @@ const SecurityTab: React.FC<SecurityTabProps> = ({
             ? `• Tap the return button (${returnButtonPosition}) ${returnTapCount || '5'} times${overlayButtonVisible ? '' : ' (invisible)'}`
             : `• Tap ${returnTapCount || '5'} times anywhere on the screen within ${returnTapTimeout ? `${(parseInt(returnTapTimeout, 10) / 1000).toFixed(1)}s` : '1.5s'}${overlayButtonVisible ? ' (visual indicator visible)' : ''}`}
           {displayMode === 'external_app' && '\n• Or use the recent apps selector'}
-          {displayMode === 'webview' && volumeUp5TapEnabled && `\n• Or press Volume Up/Down ${returnTapCount || '5'} times rapidly`}
+          {(displayMode === 'webview' || displayMode === 'media_player') && volumeUp5TapEnabled && `\n• Or press Volume Up/Down ${returnTapCount || '5'} times rapidly`}
         </Text>
       </SettingsSection>
     </View>

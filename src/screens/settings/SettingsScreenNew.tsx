@@ -15,6 +15,7 @@ import {
   FlatList,
   Modal,
   StyleSheet,
+  BackHandler,
 } from 'react-native';
 import CookieManager from '@react-native-cookies/cookies';
 import { Camera } from 'react-native-vision-camera';
@@ -44,6 +45,8 @@ import ScreenScheduleRuleEditor from '../../components/settings/ScreenScheduleRu
 import { ScheduledEvent } from '../../types/planner';
 import { ScreenScheduleRule } from '../../types/screenScheduler';
 import { ManagedApp } from '../../types/managedApps';
+import { MediaItem, MediaFitMode, generateMediaItemId, detectMediaType } from '../../types/mediaPlayer';
+import FilePickerModule from '../../utils/FilePickerModule';
 
 const { KioskModule } = NativeModules;
 
@@ -94,7 +97,7 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const [dashboardModeEnabled, setDashboardModeEnabled] = useState<boolean>(false);
 
   // External app states
-  const [displayMode, setDisplayMode] = useState<'webview' | 'external_app'>('webview');
+  const [displayMode, setDisplayMode] = useState<'webview' | 'external_app' | 'media_player'>('webview');
   const [externalAppPackage, setExternalAppPackage] = useState<string>('');
   const [autoRelaunchApp, setAutoRelaunchApp] = useState<boolean>(true);
   const [overlayButtonVisible, setOverlayButtonVisible] = useState<boolean>(false);
@@ -180,6 +183,20 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
   // WebView Zoom Level
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   
+  // Media Player states
+  const [mediaPlayerItems, setMediaPlayerItems] = useState<MediaItem[]>([]);
+  const [mediaPlayerAutoPlay, setMediaPlayerAutoPlay] = useState<boolean>(true);
+  const [mediaPlayerLoop, setMediaPlayerLoop] = useState<boolean>(true);
+  const [mediaPlayerShuffle, setMediaPlayerShuffle] = useState<boolean>(false);
+  const [mediaPlayerImageDuration, setMediaPlayerImageDuration] = useState<string>('10');
+  const [mediaPlayerShowControls, setMediaPlayerShowControls] = useState<boolean>(false);
+  const [mediaPlayerFitMode, setMediaPlayerFitMode] = useState<MediaFitMode>('contain');
+  const [mediaPlayerBgColor, setMediaPlayerBgColor] = useState<string>('#000000');
+  const [mediaPlayerTransition, setMediaPlayerTransition] = useState<boolean>(true);
+  const [mediaPlayerTransitionDuration, setMediaPlayerTransitionDuration] = useState<string>('500');
+  const [mediaPlayerMute, setMediaPlayerMute] = useState<boolean>(false);
+  const [pickingMedia, setPickingMedia] = useState<boolean>(false);
+
   // Update states
   const [checkingUpdate, setCheckingUpdate] = useState<boolean>(false);
   const [updateAvailable, setUpdateAvailable] = useState<boolean>(false);
@@ -245,6 +262,15 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
     checkDeviceOwner();
     loadCurrentVersion();
     checkLightSensor();
+  }, []);
+
+  // Block Android back gesture/button on Settings screen to prevent PIN bypass (#93)
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Prevent back navigation — user must use Save or explicit back-to-kiosk buttons
+      return true;
+    });
+    return () => backHandler.remove();
   }, []);
 
   // Subscribe to camera device changes — handles the race condition where
@@ -537,6 +563,30 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
     // WebView Zoom Level
     const savedZoomLevel = await StorageService.getWebViewZoomLevel();
     setZoomLevel(savedZoomLevel);
+
+    // Media Player settings
+    const savedMediaItems = await StorageService.getMediaPlayerItems();
+    const savedMediaAutoPlay = await StorageService.getMediaPlayerAutoPlay();
+    const savedMediaLoop = await StorageService.getMediaPlayerLoop();
+    const savedMediaShuffle = await StorageService.getMediaPlayerShuffle();
+    const savedMediaImageDuration = await StorageService.getMediaPlayerImageDuration();
+    const savedMediaShowControls = await StorageService.getMediaPlayerShowControls();
+    const savedMediaFitMode = await StorageService.getMediaPlayerFitMode();
+    const savedMediaBgColor = await StorageService.getMediaPlayerBgColor();
+    const savedMediaTransition = await StorageService.getMediaPlayerTransition();
+    const savedMediaTransitionDuration = await StorageService.getMediaPlayerTransitionDuration();
+    const savedMediaMute = await StorageService.getMediaPlayerMute();
+    setMediaPlayerItems(savedMediaItems);
+    setMediaPlayerAutoPlay(savedMediaAutoPlay);
+    setMediaPlayerLoop(savedMediaLoop);
+    setMediaPlayerShuffle(savedMediaShuffle);
+    setMediaPlayerImageDuration(String(savedMediaImageDuration));
+    setMediaPlayerShowControls(savedMediaShowControls);
+    setMediaPlayerFitMode(savedMediaFitMode);
+    setMediaPlayerBgColor(savedMediaBgColor);
+    setMediaPlayerTransition(savedMediaTransition);
+    setMediaPlayerTransitionDuration(String(savedMediaTransitionDuration));
+    setMediaPlayerMute(savedMediaMute);
   };
 
   const loadCertificates = async (): Promise<void> => {
@@ -565,7 +615,7 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
     }
   };
 
-  const handleDisplayModeChange = async (newMode: 'webview' | 'external_app') => {
+  const handleDisplayModeChange = async (newMode: 'webview' | 'external_app' | 'media_player') => {
     try {
       setDisplayMode(newMode);
       if (newMode === 'external_app') {
@@ -575,6 +625,41 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error changing display mode:', error);
+    }
+  };
+
+  /**
+   * Handle picking media files from device storage.
+   * Opens the Android file picker, copies selected files to app storage,
+   * and adds them to the media playlist.
+   */
+  const handlePickMediaFromDevice = async (type: 'video' | 'image' | 'any') => {
+    try {
+      setPickingMedia(true);
+      const result = await FilePickerModule.pickMultipleMedia(type);
+
+      const files = Array.isArray(result) ? result : [result];
+
+      if (files.length === 0) {
+        return;
+      }
+
+      const newItems: MediaItem[] = files.map((file: any) => ({
+        id: generateMediaItemId(),
+        url: file.path,
+        type: (file.type === 'video' ? 'video' : 'image') as 'video' | 'image',
+        title: file.name,
+        isLocal: true,
+        fileName: file.name,
+      }));
+
+      setMediaPlayerItems(prev => [...prev, ...newItems]);
+    } catch (error: any) {
+      if (error?.code !== 'PICKER_CANCELLED') {
+        Alert.alert('Error', `Failed to pick media: ${error?.message || error}`);
+      }
+    } finally {
+      setPickingMedia(false);
     }
   };
 
@@ -879,6 +964,25 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
       return;
     }
 
+    if (displayMode === 'media_player') {
+      if (mediaPlayerItems.length === 0) {
+        Alert.alert('Error', 'Please add at least one media item (video or image URL)');
+        return;
+      }
+      // Validate all media URLs
+      for (const item of mediaPlayerItems) {
+        if (!item.url || !item.url.trim()) {
+          Alert.alert('Error', 'All media items must have a valid URL');
+          return;
+        }
+        const urlLower = item.url.toLowerCase();
+        if (!urlLower.startsWith('http://') && !urlLower.startsWith('https://') && !urlLower.startsWith('file://')) {
+          Alert.alert('Error', `Invalid URL: ${item.url}\nMedia URLs must start with http://, https://, or file://`);
+          return;
+        }
+      }
+    }
+
     if (displayMode === 'external_app') {
       if (externalAppMode === 'single') {
         // Single mode: require a package name (classic behavior)
@@ -993,8 +1097,8 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
     // Save brightness management setting (applies to ALL modes)
     await StorageService.saveBrightnessManagementEnabled(brightnessManagementEnabled);
 
-    if (displayMode === 'webview') {
-      await StorageService.saveAutoReload(autoReload);
+    if (displayMode === 'webview' || displayMode === 'media_player') {
+      await StorageService.saveAutoReload(displayMode === 'webview' ? autoReload : false);
       await StorageService.saveKioskEnabled(kioskEnabled);
       await StorageService.saveScreensaverEnabled(screensaverEnabled);
       await StorageService.saveDefaultBrightness(defaultBrightness);
@@ -1013,13 +1117,17 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
       await StorageService.saveScreenSchedulerRules(screenSchedulerRules);
       await StorageService.saveScreenSchedulerWakeOnTouch(screenSchedulerWakeOnTouch);
 
-      // Inactivity Return to Home settings
-      await StorageService.saveInactivityReturnEnabled(inactivityReturnEnabled);
-      const returnDelay = parseInt(inactivityReturnDelay, 10);
-      await StorageService.saveInactivityReturnDelay(isNaN(returnDelay) ? 60 : Math.max(5, Math.min(3600, returnDelay)));
-      await StorageService.saveInactivityReturnResetOnNav(inactivityReturnResetOnNav);
-      await StorageService.saveInactivityReturnClearCache(inactivityReturnClearCache);
-      await StorageService.saveInactivityReturnScrollTop(inactivityReturnScrollTop);
+      // Inactivity Return to Home settings (webview only)
+      if (displayMode === 'webview') {
+        await StorageService.saveInactivityReturnEnabled(inactivityReturnEnabled);
+        const returnDelay = parseInt(inactivityReturnDelay, 10);
+        await StorageService.saveInactivityReturnDelay(isNaN(returnDelay) ? 60 : Math.max(5, Math.min(3600, returnDelay)));
+        await StorageService.saveInactivityReturnResetOnNav(inactivityReturnResetOnNav);
+        await StorageService.saveInactivityReturnClearCache(inactivityReturnClearCache);
+        await StorageService.saveInactivityReturnScrollTop(inactivityReturnScrollTop);
+      } else {
+        await StorageService.saveInactivityReturnEnabled(false);
+      }
     } else {
       await StorageService.saveAutoReload(false);
       await StorageService.saveKioskEnabled(kioskEnabled);
@@ -1096,6 +1204,23 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
     // Save PDF Viewer setting
     await StorageService.savePdfViewerEnabled(pdfViewerEnabled);
 
+    // Save Media Player settings
+    if (displayMode === 'media_player') {
+      await StorageService.saveMediaPlayerItems(mediaPlayerItems);
+      await StorageService.saveMediaPlayerAutoPlay(mediaPlayerAutoPlay);
+      await StorageService.saveMediaPlayerLoop(mediaPlayerLoop);
+      await StorageService.saveMediaPlayerShuffle(mediaPlayerShuffle);
+      const imgDur = parseInt(mediaPlayerImageDuration, 10);
+      await StorageService.saveMediaPlayerImageDuration(isNaN(imgDur) ? 10 : Math.max(1, Math.min(3600, imgDur)));
+      await StorageService.saveMediaPlayerShowControls(mediaPlayerShowControls);
+      await StorageService.saveMediaPlayerFitMode(mediaPlayerFitMode);
+      await StorageService.saveMediaPlayerBgColor(mediaPlayerBgColor);
+      await StorageService.saveMediaPlayerTransition(mediaPlayerTransition);
+      const transDur = parseInt(mediaPlayerTransitionDuration, 10);
+      await StorageService.saveMediaPlayerTransitionDuration(isNaN(transDur) ? 500 : Math.max(0, Math.min(3000, transDur)));
+      await StorageService.saveMediaPlayerMute(mediaPlayerMute);
+    }
+
     // Update accessibility whitelist if device owner
     if (isDeviceOwner && displayMode === 'external_app') {
       try {
@@ -1129,7 +1254,8 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
           returnMode, 
           returnButtonPosition,
           externalAppPackage,
-          autoRelaunchApp
+          autoRelaunchApp,
+          allowNotifications
         );
       } catch (error) {
         // Silent fail
@@ -1146,9 +1272,11 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
       }
       const message = displayMode === 'external_app'
         ? 'Configuration saved\nLock mode enabled'
+        : displayMode === 'media_player'
+        ? 'Configuration saved\nMedia player locked'
         : 'Configuration saved\nScreen pinning enabled';
       Alert.alert('Success', message, [
-        { text: 'OK', onPress: () => navigation.navigate('Kiosk') },
+        { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Kiosk' }] }) },
       ]);
     } else {
       try {
@@ -1158,9 +1286,11 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
       }
       const message = displayMode === 'external_app'
         ? 'Configuration saved\nExternal app will launch automatically'
+        : displayMode === 'media_player'
+        ? 'Configuration saved\nMedia player will start'
         : 'Configuration saved\nScreen pinning disabled';
       Alert.alert('Success', message, [
-        { text: 'OK', onPress: () => navigation.navigate('Kiosk') },
+        { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Kiosk' }] }) },
       ]);
     }
   };
@@ -1238,12 +1368,25 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
               setInactivityReturnClearCache(false);
               setInactivityReturnScrollTop(true);
 
+              // Reset media player state
+              setMediaPlayerItems([]);
+              setMediaPlayerAutoPlay(true);
+              setMediaPlayerLoop(true);
+              setMediaPlayerShuffle(false);
+              setMediaPlayerImageDuration('10');
+              setMediaPlayerShowControls(false);
+              setMediaPlayerFitMode('contain');
+              setMediaPlayerBgColor('#000000');
+              setMediaPlayerTransition(true);
+              setMediaPlayerTransitionDuration('500');
+              setMediaPlayerMute(false);
+
               try {
                 await KioskModule.stopLockTask();
               } catch {}
 
               Alert.alert('Success', 'Settings reset!\nPlease reconfigure the app.', [
-                { text: 'OK', onPress: () => navigation.navigate('Kiosk') },
+                { text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Kiosk' }] }) },
               ]);
             } catch (error) {
               Alert.alert('Error', `Reset failed: ${error}`);
@@ -1310,7 +1453,7 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
               Alert.alert(
                 'Success',
                 'Device Owner removed!\n\nYou can now uninstall FreeKiosk normally.',
-                [{ text: 'OK', onPress: () => navigation.navigate('Kiosk') }]
+                [{ text: 'OK', onPress: () => navigation.reset({ index: 0, routes: [{ name: 'Kiosk' }] }) }]
               );
             } catch (error: any) {
               Alert.alert('Error', `Failed: ${error.message || error}`);
@@ -1442,7 +1585,32 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
             onInactivityReturnClearCacheChange={setInactivityReturnClearCache}
             inactivityReturnScrollTop={inactivityReturnScrollTop}
             onInactivityReturnScrollTopChange={setInactivityReturnScrollTop}
-            onBackToKiosk={() => navigation.navigate('Kiosk')}
+            // Media Player props
+            mediaPlayerItems={mediaPlayerItems}
+            onMediaPlayerItemsChange={setMediaPlayerItems}
+            mediaPlayerAutoPlay={mediaPlayerAutoPlay}
+            onMediaPlayerAutoPlayChange={setMediaPlayerAutoPlay}
+            mediaPlayerLoop={mediaPlayerLoop}
+            onMediaPlayerLoopChange={setMediaPlayerLoop}
+            mediaPlayerShuffle={mediaPlayerShuffle}
+            onMediaPlayerShuffleChange={setMediaPlayerShuffle}
+            mediaPlayerImageDuration={mediaPlayerImageDuration}
+            onMediaPlayerImageDurationChange={setMediaPlayerImageDuration}
+            mediaPlayerShowControls={mediaPlayerShowControls}
+            onMediaPlayerShowControlsChange={setMediaPlayerShowControls}
+            mediaPlayerFitMode={mediaPlayerFitMode}
+            onMediaPlayerFitModeChange={setMediaPlayerFitMode}
+            mediaPlayerBgColor={mediaPlayerBgColor}
+            onMediaPlayerBgColorChange={setMediaPlayerBgColor}
+            mediaPlayerTransition={mediaPlayerTransition}
+            onMediaPlayerTransitionChange={setMediaPlayerTransition}
+            mediaPlayerTransitionDuration={mediaPlayerTransitionDuration}
+            onMediaPlayerTransitionDurationChange={setMediaPlayerTransitionDuration}
+            mediaPlayerMute={mediaPlayerMute}
+            onMediaPlayerMuteChange={setMediaPlayerMute}
+            onPickMediaFromDevice={handlePickMediaFromDevice}
+            pickingMedia={pickingMedia}
+            onBackToKiosk={() => navigation.reset({ index: 0, routes: [{ name: 'Kiosk' }] })}
           />
         );
       

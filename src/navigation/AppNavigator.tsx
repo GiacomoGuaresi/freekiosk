@@ -37,6 +37,7 @@ const AppNavigator: React.FC = () => {
           component={PinScreen}
           options={{
             headerShown: false,
+            gestureEnabled: false,
           }}
         />
         <Stack.Screen 
@@ -44,6 +45,7 @@ const AppNavigator: React.FC = () => {
           component={SettingsScreen}
           options={{
             headerShown: false, // v1.2: Custom header with tabs
+            gestureEnabled: false,
           }}
         />
         <Stack.Screen 

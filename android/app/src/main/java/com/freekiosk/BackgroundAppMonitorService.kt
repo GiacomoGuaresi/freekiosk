@@ -5,7 +5,6 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -22,8 +21,10 @@ import androidx.core.app.NotificationCompat
  * Runs as a foreground service to periodically check if managed apps
  * with keepAlive=true are still running. If not, relaunches them.
  * 
- * Uses ActivityManager.getRunningAppProcesses() for reliable process detection
- * instead of UsageStatsManager which only tracks user interaction.
+ * Process detection strategy (layered, most → least reliable):
+ *  1. Shell `pidof <pkg>` — sees ALL processes regardless of UID (no root needed)
+ *  2. ActivityManager.getRunningAppProcesses() — only sees own-UID + foreground
+ *  3. ActivityManager.getRunningServices() — catches service-only apps
  * 
  * Feature #37: Launch app in background on startup / keep alive
  */
@@ -41,7 +42,9 @@ class BackgroundAppMonitorService : Service() {
     private var isRunning = false
     // Track recent relaunch timestamps to avoid relaunch storms
     private val relaunchTimestamps = mutableMapOf<String, Long>()
-    private val RELAUNCH_COOLDOWN_MS = 60_000L // Min 60s between relaunches of same app
+    private val RELAUNCH_COOLDOWN_MS = 120_000L // Min 120s between relaunches of same app
+    // Track apps we have successfully launched at least once
+    private val launchedOnce = mutableSetOf<String>()
 
     private val checkRunnable = object : Runnable {
         override fun run() {
@@ -57,6 +60,11 @@ class BackgroundAppMonitorService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // MUST call startForeground() immediately to satisfy Android's requirement
+        // (startForegroundService() requires startForeground() within 5 seconds)
+        val notification = buildNotification()
+        startForeground(NOTIFICATION_ID, notification)
+
         // Read keep-alive packages from AsyncStorage
         keepAlivePackages = readKeepAlivePackages()
         
@@ -65,14 +73,11 @@ class BackgroundAppMonitorService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-
-        // Start as foreground service
-        val notification = buildNotification()
-        startForeground(NOTIFICATION_ID, notification)
         
         isRunning = true
         handler.removeCallbacks(checkRunnable)
-        handler.postDelayed(checkRunnable, CHECK_INTERVAL_MS)
+        // Start first check after a longer initial delay (give boot apps time to start)
+        handler.postDelayed(checkRunnable, CHECK_INTERVAL_MS * 2)
         
         DebugLog.d(TAG, "Monitoring ${keepAlivePackages.size} keep-alive apps: $keepAlivePackages")
         
@@ -92,6 +97,20 @@ class BackgroundAppMonitorService : Service() {
      * Check if keep-alive apps are running and relaunch if needed.
      */
     private fun checkAndRelaunchApps() {
+        // Safety: check if display mode is still external_app — stop if not
+        if (!isExternalAppMode()) {
+            DebugLog.d(TAG, "Display mode is no longer external_app, stopping service")
+            stopSelf()
+            return
+        }
+
+        // Don't relaunch if FreeKiosk is NOT in the foreground
+        // (user might be in Settings, PIN screen, or another flow)
+        if (!isFreeKioskInForeground()) {
+            DebugLog.d(TAG, "FreeKiosk is not in foreground, skipping relaunch check")
+            return
+        }
+        
         // Re-read in case config changed
         keepAlivePackages = readKeepAlivePackages()
         if (keepAlivePackages.isEmpty()) {
@@ -118,25 +137,74 @@ class BackgroundAppMonitorService : Service() {
     }
 
     /**
-     * Check if an app's process is actually running using ActivityManager.
-     * This is more reliable than UsageStatsManager which only tracks UI interaction.
+     * Check if FreeKiosk itself is the current foreground app.
+     * If not (e.g. user is in Settings, PIN screen), we should NOT relaunch
+     * background apps because it would cause visual disruption.
      */
-    private fun isAppProcessRunning(packageName: String): Boolean {
+    private fun isFreeKioskInForeground(): Boolean {
         return try {
             val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            
-            // Method 1: Check running app processes (works for most cases)
             @Suppress("DEPRECATION")
             val runningProcesses = am.runningAppProcesses
             if (runningProcesses != null) {
                 for (process in runningProcesses) {
-                    if (process.pkgList?.contains(packageName) == true) {
+                    if (process.processName == packageName &&
+                        process.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
                         return true
                     }
                 }
             }
-            
-            // Method 2: Check running services (catches service-only apps)
+            false
+        } catch (e: Exception) {
+            // On error, assume foreground to allow relaunches
+            true
+        }
+    }
+
+    /**
+     * Check if an app's process is actually running.
+     * 
+     * Uses a layered approach because ActivityManager.getRunningAppProcesses()
+     * on Android 5.0+ only returns the calling app's own processes and the
+     * foreground process — it CANNOT see other apps' background processes.
+     * This caused false negatives → unnecessary relaunches → visual flashing.
+     * 
+     * Solution: use `pidof` shell command which can see ALL processes.
+     */
+    private fun isAppProcessRunning(packageName: String): Boolean {
+        // Method 1 (most reliable): Use `pidof` shell command
+        // This sees ALL processes regardless of UID, no root needed
+        try {
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", "pidof $packageName"))
+            val output = process.inputStream.bufferedReader().readText().trim()
+            process.waitFor()
+            if (output.isNotEmpty()) {
+                DebugLog.d(TAG, "pidof found $packageName: PID=$output")
+                return true
+            }
+        } catch (e: Exception) {
+            DebugLog.d(TAG, "pidof failed for $packageName: ${e.message}")
+        }
+
+        // Method 2: Check running app processes (limited on Android 5.0+)
+        try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+            @Suppress("DEPRECATION")
+            val runningProcesses = am.runningAppProcesses
+            if (runningProcesses != null) {
+                for (proc in runningProcesses) {
+                    if (proc.pkgList?.contains(packageName) == true) {
+                        return true
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            DebugLog.d(TAG, "getRunningAppProcesses failed: ${e.message}")
+        }
+
+        // Method 3: Check running services (catches service-only apps)
+        try {
+            val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
             @Suppress("DEPRECATION")
             val runningServices = am.getRunningServices(200)
             if (runningServices != null) {
@@ -146,31 +214,35 @@ class BackgroundAppMonitorService : Service() {
                     }
                 }
             }
-            
-            false
         } catch (e: Exception) {
-            DebugLog.d(TAG, "Error checking if $packageName process is running: ${e.message}")
-            // On error, assume running to avoid unnecessary relaunches
-            true
+            DebugLog.d(TAG, "getRunningServices failed: ${e.message}")
         }
+        
+        DebugLog.d(TAG, "Process NOT found for $packageName (all methods failed)")
+        return false
     }
 
     /**
-     * Relaunch a dead keep-alive app, then bring FreeKiosk back to the foreground.
-     * Android has no API to launch an app "in the background", so we launch it
-     * and immediately return focus to FreeKiosk.
+     * Relaunch a dead keep-alive app silently in the background.
+     * 
+     * Uses FLAG_ACTIVITY_NO_ANIMATION to minimise visual disruption and
+     * brings FreeKiosk back to front after a short delay. The delay is kept
+     * short (300ms) to reduce the visible flash.
      */
     private fun relaunchApp(packageName: String) {
         try {
             val pm = packageManager
             val launchIntent = pm.getLaunchIntentForPackage(packageName)
             if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                launchIntent.addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_NO_ANIMATION
+                )
                 startActivity(launchIntent)
+                launchedOnce.add(packageName)
                 DebugLog.d(TAG, "Relaunched: $packageName — bringing FreeKiosk back to front")
                 // Bring FreeKiosk back to the foreground after a short delay
-                // so the relaunched app has time to initialize
-                handler.postDelayed({ bringFreeKioskToFront() }, 800)
+                handler.postDelayed({ bringFreeKioskToFront() }, 300)
             } else {
                 DebugLog.d(TAG, "No launch intent for: $packageName")
             }
@@ -188,7 +260,8 @@ class BackgroundAppMonitorService : Service() {
             intent.addFlags(
                 Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                Intent.FLAG_ACTIVITY_NO_ANIMATION
             )
             startActivity(intent)
             DebugLog.d(TAG, "FreeKiosk brought back to front")
@@ -235,6 +308,34 @@ class BackgroundAppMonitorService : Service() {
         } catch (e: Exception) {
             DebugLog.d(TAG, "Could not read managed apps: ${e.message}")
             emptyList()
+        }
+    }
+
+    /**
+     * Check if the current display mode is still external_app.
+     * If the user switched to webview/media, we should stop monitoring.
+     */
+    private fun isExternalAppMode(): Boolean {
+        return try {
+            val dbPath = getDatabasePath("RKStorage").absolutePath
+            val db = SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READONLY)
+            val cursor = db.rawQuery(
+                "SELECT value FROM catalystLocalStorage WHERE key = ?",
+                arrayOf("@kiosk_display_mode")
+            )
+            val result = if (cursor.moveToFirst()) {
+                val value = cursor.getString(0) ?: "webview"
+                value == "external_app"
+            } else {
+                false
+            }
+            cursor.close()
+            db.close()
+            result
+        } catch (e: Exception) {
+            DebugLog.d(TAG, "Could not read display mode: ${e.message}")
+            // On error, stop monitoring to be safe
+            false
         }
     }
 

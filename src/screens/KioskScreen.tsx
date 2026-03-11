@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNBrightness from 'react-native-brightness-newarch';
 import { useIsFocused, useFocusEffect } from '@react-navigation/native';
 import WebViewComponent, { WebViewComponentRef } from '../components/WebViewComponent';
+import MediaPlayerComponent from '../components/MediaPlayerComponent';
 import StatusBar from '../components/StatusBar';
 import MotionDetector from '../components/MotionDetector';
 import ExternalAppOverlay from '../components/ExternalAppOverlay';
@@ -20,6 +21,7 @@ import DeviceControlService from '../services/DeviceControlService';
 import { ScheduledEvent, getActiveEvent } from '../types/planner';
 import { DashboardTile } from '../types/dashboard';
 import DashboardGrid from '../components/DashboardGrid';
+import type { MediaItem, MediaFitMode } from '../types/mediaPlayer';
 import { ScreenScheduleRule, getNextWakeTime, getActiveSleepRule, getNextSleepTime } from '../types/screenScheduler';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/AppNavigator';
@@ -60,7 +62,7 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
   const timerRef = useRef<any>(null);
 
   // External app states
-  const [displayMode, setDisplayMode] = useState<'webview' | 'external_app'>('webview');
+  const [displayMode, setDisplayMode] = useState<'webview' | 'external_app' | 'media_player'>('webview');
   const [externalAppPackage, setExternalAppPackage] = useState<string | null>(null);
   const [autoRelaunchApp, setAutoRelaunchApp] = useState<boolean>(true);
   const [appCrashCount, setAppCrashCount] = useState<number>(0);
@@ -76,6 +78,7 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
   const [allowNotifications, setAllowNotifications] = useState<boolean>(false);
   const appStateRef = useRef(AppState.currentState);
   const appLaunchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isNavigatingToPinRef = useRef<boolean>(false); // Guard to prevent relaunch during 5-tap→PIN navigation
   const tapCountRef = useRef<number>(0);
   const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -175,11 +178,37 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
   const [pdfViewerEnabled, setPdfViewerEnabled] = useState<boolean>(false);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
 
+  // Media Player states
+  const [mediaPlayerItems, setMediaPlayerItems] = useState<MediaItem[]>([]);
+  const [mediaPlayerAutoPlay, setMediaPlayerAutoPlay] = useState<boolean>(true);
+  const [mediaPlayerLoop, setMediaPlayerLoop] = useState<boolean>(true);
+  const [mediaPlayerShuffle, setMediaPlayerShuffle] = useState<boolean>(false);
+  const [mediaPlayerImageDuration, setMediaPlayerImageDuration] = useState<number>(10);
+  const [mediaPlayerShowControls, setMediaPlayerShowControls] = useState<boolean>(false);
+  const [mediaPlayerFitMode, setMediaPlayerFitMode] = useState<MediaFitMode>('contain');
+  const [mediaPlayerBgColor, setMediaPlayerBgColor] = useState<string>('#000000');
+  const [mediaPlayerTransition, setMediaPlayerTransition] = useState<boolean>(true);
+  const [mediaPlayerTransitionDuration, setMediaPlayerTransitionDuration] = useState<number>(500);
+  const [mediaPlayerMute, setMediaPlayerMute] = useState<boolean>(false);
+
   // AppState listener - détecte quand l'app revient au premier plan
   useEffect(() => {
     const subscription = AppState.addEventListener('change', async nextAppState => {
       // L'app revient au premier plan (depuis background ou inactive)
       if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        // CRITICAL: Update appStateRef IMMEDIATELY before any async work
+        // This prevents duplicate AppState fires (Android can fire multiple
+        // background→active transitions) from all entering this block.
+        // Without this, the first call clears blockAutoRelaunch, and the
+        // second call sees it as false → triggers unwanted relaunch.
+        appStateRef.current = nextAppState;
+        
+        // If navigateToPin is in progress, skip all relaunch logic
+        if (isNavigatingToPinRef.current) {
+          console.log('[KioskScreen] AppState: skipping relaunch (navigateToPin in progress)');
+          return;
+        }
+        
         try {
           // CRITICAL: Read current mode from storage to avoid stale closure values
           // (user may have just switched from single→multi in settings)
@@ -196,7 +225,6 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
             console.log('[KioskScreen] Multi-app: returning to app grid');
             setIsAppLaunched(false);
             setCountdownActive(false); // Cancel any active countdown
-            appStateRef.current = nextAppState;
             return;
           }
           
@@ -209,7 +237,6 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
             // Reset le flag après l'avoir lu
             await KioskModule.clearBlockAutoRelaunch();
             setIsAppLaunched(false);
-            appStateRef.current = nextAppState;
             return;
           }
           
@@ -220,7 +247,6 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
           if (currentBackButtonMode === 'test') {
             // Mode test: pas de relance auto
             setIsAppLaunched(false);
-            appStateRef.current = nextAppState;
             return;
           }
           
@@ -230,7 +256,6 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
             setCountdownSeconds(timerDelay);
             setCountdownActive(true);
             setIsAppLaunched(false);
-            appStateRef.current = nextAppState;
             return;
           }
           
@@ -245,9 +270,9 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
         } catch (error) {
           console.error('[KioskScreen] Error checking block flag:', error);
         }
+      } else {
+        appStateRef.current = nextAppState;
       }
-      
-      appStateRef.current = nextAppState;
     });
 
     return () => {
@@ -727,6 +752,11 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
       
       await loadSettings();
       
+      // Clear navigating-to-pin guard AFTER loadSettings completes.
+      // This ensures the guard is available during loadSettings execution
+      // to prevent external app relaunch during 5-tap→PIN navigation.
+      isNavigatingToPinRef.current = false;
+      
       // Reload blocking overlays to ensure they stay active when returning from settings
       try {
         const blockingEnabled = await StorageService.getBlockingOverlaysEnabled();
@@ -1120,8 +1150,16 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
     const appReturnedListener = eventEmitter.addListener(
       'onAppReturned',
       (event: any) => {
-        // Defer to next tick to avoid CalledFromWrongThreadException
-        // when react-native-screens manipulates views during commit on native thread
+        // Set guard SYNCHRONOUSLY (before any setTimeout) to prevent race with loadSettings
+        if (event?.voluntary) {
+          isNavigatingToPinRef.current = true;
+          // Cancel any pending relaunch timeout
+          if (appLaunchTimeoutRef.current) {
+            clearTimeout(appLaunchTimeoutRef.current);
+            appLaunchTimeoutRef.current = null;
+          }
+        }
+        // Defer UI work to next tick to avoid CalledFromWrongThreadException
         setTimeout(() => handleAppReturned(event), 0);
       }
     );
@@ -1130,9 +1168,20 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
     const navigateToPinListener = eventEmitter.addListener(
       'navigateToPin',
       () => {
-        // Defer to next tick to avoid CalledFromWrongThreadException
-        // when react-native-screens manipulates views during commit on native thread
+        // Set guard SYNCHRONOUSLY to prevent race with loadSettings
+        isNavigatingToPinRef.current = true;
+        
+        // Cancel any pending relaunch timeout (from AppState "Immediate mode")
+        if (appLaunchTimeoutRef.current) {
+          clearTimeout(appLaunchTimeoutRef.current);
+          appLaunchTimeoutRef.current = null;
+        }
+        
+        // Defer UI work to next tick to avoid CalledFromWrongThreadException
         setTimeout(() => {
+          // Stop overlay service to prevent foreground monitor from relaunching
+          OverlayServiceModule.stopOverlayService().catch(() => {});
+          
           // Le flag natif est déjà mis par OverlayService.returnToFreeKiosk()
           navigation.navigate('Pin');
         }, 0);
@@ -1254,7 +1303,7 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
       setShowTime(savedShowTime);
 
       // Load external app settings
-      const savedDisplayMode = (str(K.DISPLAY_MODE) ?? 'webview') as 'webview' | 'external_app';
+      const savedDisplayMode = (str(K.DISPLAY_MODE) ?? 'webview') as 'webview' | 'external_app' | 'media_player';
       const savedExternalAppPackage = str(K.EXTERNAL_APP_PACKAGE);
       const savedAutoRelaunchApp = bool(K.AUTO_RELAUNCH_APP, false);
       console.log('[KioskScreen] savedDisplayMode:', savedDisplayMode, 'savedExternalAppPackage:', savedExternalAppPackage, 'savedAutoRelaunchApp:', savedAutoRelaunchApp);
@@ -1397,8 +1446,35 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
       const savedZoomLevel = num(K.WEBVIEW_ZOOM_LEVEL, 100);
       setZoomLevel(savedZoomLevel);
       
-      // Start auto-brightness if enabled (only in webview mode and when app manages brightness)
-      if (savedBrightnessManagementEnabled && savedAutoBrightnessEnabled && savedDisplayMode === 'webview') {
+      // Load Media Player settings
+      if (savedDisplayMode === 'media_player') {
+        const mpItems = jsonParse(K.MEDIA_PLAYER_ITEMS, []) as MediaItem[];
+        const mpAutoPlay = bool(K.MEDIA_PLAYER_AUTOPLAY, true);
+        const mpLoop = bool(K.MEDIA_PLAYER_LOOP, true);
+        const mpShuffle = bool(K.MEDIA_PLAYER_SHUFFLE, false);
+        const mpImageDuration = num(K.MEDIA_PLAYER_IMAGE_DURATION, 10);
+        const mpShowControls = bool(K.MEDIA_PLAYER_SHOW_CONTROLS, false);
+        const mpFitMode = (str(K.MEDIA_PLAYER_FIT_MODE) ?? 'contain') as MediaFitMode;
+        const mpBgColor = str(K.MEDIA_PLAYER_BG_COLOR) ?? '#000000';
+        const mpTransition = bool(K.MEDIA_PLAYER_TRANSITION, true);
+        const mpTransitionDuration = num(K.MEDIA_PLAYER_TRANSITION_DURATION, 500);
+        const mpMute = bool(K.MEDIA_PLAYER_MUTE, false);
+        setMediaPlayerItems(mpItems);
+        setMediaPlayerAutoPlay(mpAutoPlay);
+        setMediaPlayerLoop(mpLoop);
+        setMediaPlayerShuffle(mpShuffle);
+        setMediaPlayerImageDuration(mpImageDuration);
+        setMediaPlayerShowControls(mpShowControls);
+        setMediaPlayerFitMode(mpFitMode);
+        setMediaPlayerBgColor(mpBgColor);
+        setMediaPlayerTransition(mpTransition);
+        setMediaPlayerTransitionDuration(mpTransitionDuration);
+        setMediaPlayerMute(mpMute);
+        console.log('[KioskScreen] Media player loaded:', mpItems.length, 'items');
+      }
+
+      // Start auto-brightness if enabled (only in webview/media_player mode and when app manages brightness)
+      if (savedBrightnessManagementEnabled && savedAutoBrightnessEnabled && (savedDisplayMode === 'webview' || savedDisplayMode === 'media_player')) {
         try {
           await AutoBrightnessModule.startAutoBrightness(
             savedAutoBrightnessMin,
@@ -1452,6 +1528,13 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
         } catch (e) {
           // Silent fail - might not be running
         }
+        // Stop background monitor — it's only relevant in external_app mode
+        try {
+          await AppLauncherModule.stopBackgroundMonitor();
+          console.log('[KioskScreen] Background monitor stopped (not in external_app mode)');
+        } catch (e) {
+          // Silent fail
+        }
       }
 
       if (savedKioskEnabled) {
@@ -1472,6 +1555,15 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
 
       // Launch external app if in external_app mode
       console.log('[KioskScreen] Checking external app launch: displayMode=' + savedDisplayMode + ', package=' + savedExternalAppPackage + ', mode=' + savedExternalAppMode);
+      
+      // CRITICAL: If navigateToPin is in progress (5-tap), do NOT launch external app.
+      // loadSettings runs async and can reach this point after the navigateToPin event
+      // has already started navigating to the PIN screen.
+      if (isNavigatingToPinRef.current) {
+        console.log('[KioskScreen] Skipping external app launch (navigateToPin in progress)');
+        return;
+      }
+      
       if (savedDisplayMode === 'external_app') {
         // Launch managed apps with launchOnBoot=true (both single and multi mode)
         try {
@@ -1509,6 +1601,19 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
             console.log('[KioskScreen] Back button mode synced to native:', savedBackBtnMode);
           } catch (e) {
             console.warn('[KioskScreen] Failed to sync back button mode:', e);
+          }
+          // FINAL CHECK: verify native blockAutoRelaunch flag right before launch.
+          // This catches the race condition where 5-tap sets the flag AFTER our
+          // earlier isNavigatingToPinRef check but BEFORE we reach this line.
+          // The native flag is set synchronously by OverlayService.returnToFreeKiosk()
+          // before startActivity, so it's always set by the time we get here.
+          const blockBeforeLaunch = await KioskModule.shouldBlockAutoRelaunch();
+          if (blockBeforeLaunch || isNavigatingToPinRef.current) {
+            console.log('[KioskScreen] Skipping external app launch (blockAutoRelaunch=' + blockBeforeLaunch + ', navigatingToPin=' + isNavigatingToPinRef.current + ')');
+            if (blockBeforeLaunch) {
+              await KioskModule.clearBlockAutoRelaunch();
+            }
+            return;
           }
           console.log('[KioskScreen] Launching external app:', savedExternalAppPackage);
           await launchExternalApp(savedExternalAppPackage, savedReturnTapCount, savedReturnTapTimeout, savedReturnMode, savedReturnButtonPosition);
@@ -1702,7 +1807,7 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
     // (except still allow N-tap for settings access)
     if (isScheduledSleepRef.current && !screenSchedulerWakeOnTouchRef.current) {
       // Still allow N-tap detection for PIN navigation even during scheduled sleep
-      if (displayMode === 'webview' && event?.isTap && returnMode === 'tap_anywhere') {
+      if ((displayMode === 'webview' || displayMode === 'media_player') && event?.isTap && returnMode === 'tap_anywhere') {
         // Fall through to tap detection below
       } else {
         return;
@@ -1740,9 +1845,9 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
       }
     }
     
-    // N-tap detection for WebView mode - Only count dedicated 'tap' events from clicks
+    // N-tap detection for WebView/MediaPlayer mode - Only count dedicated 'tap' events from clicks
     // In button mode: taps are handled by the button itself, not here
-    if (displayMode === 'webview' && event?.isTap && returnMode === 'tap_anywhere') {
+    if ((displayMode === 'webview' || displayMode === 'media_player') && event?.isTap && returnMode === 'tap_anywhere') {
       const now = Date.now();
       const tapX = event.x ?? 0;
       const tapY = event.y ?? 0;
@@ -1985,6 +2090,11 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
   const handleGoToSettings = (): void => {
     clearTimer();
     setIsScreensaverActive(false);
+    // Stop background monitor when entering settings — will restart on loadSettings if needed
+    AppLauncherModule.stopBackgroundMonitor().catch(() => {});
+    // Stop OverlayService to prevent foreground monitor from relaunching external app
+    // while user is navigating PIN/Settings screens
+    OverlayServiceModule.stopOverlayService().catch(() => {});
     navigation.navigate('Pin');
   };
 
@@ -2080,31 +2190,34 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
               urlFilterPatterns={urlFilterEnabled ? urlFilterList : undefined}
               urlFilterShowFeedback={urlFilterShowFeedback}
               pdfViewerEnabled={pdfViewerEnabled}
+              zoomLevel={zoomLevel}
             />
           )}
-          <WebViewComponent 
-            ref={webViewRef}
-            key={webViewKey} 
-            url={url} 
-            autoReload={autoReload} 
-            keyboardMode={keyboardMode} 
+        </>
+      ) : displayMode === 'media_player' ? (
+        <>
+          {statusBarEnabled && (
+            <StatusBar
+              showBattery={showBattery}
+              showWifi={showWifi}
+              showBluetooth={showBluetooth}
+              showVolume={showVolume}
+              showTime={showTime}
+            />
+          )}
+          <MediaPlayerComponent
+            items={mediaPlayerItems}
+            autoPlay={mediaPlayerAutoPlay}
+            loop={mediaPlayerLoop}
+            shuffle={mediaPlayerShuffle}
+            imageDuration={mediaPlayerImageDuration}
+            showControls={mediaPlayerShowControls}
+            fitMode={mediaPlayerFitMode}
+            backgroundColor={mediaPlayerBgColor}
+            transitionEnabled={mediaPlayerTransition}
+            transitionDuration={mediaPlayerTransitionDuration}
+            muteVideo={mediaPlayerMute}
             onUserInteraction={onUserInteraction}
-            jsToExecute={jsToExecute}
-            onJsExecuted={() => setJsToExecute('')}
-            showBackButton={webViewBackButtonEnabled}
-            onNavigationStateChange={setCanGoBack}
-            onPageNavigated={(navUrl: string) => {
-              currentWebViewUrlRef.current = navUrl;
-              // Reset inactivity timer on page navigation if enabled
-              if (inactivityReturnResetOnNav) {
-                markUserInteraction();
-              }
-            }}
-            urlFilterMode={urlFilterEnabled ? urlFilterMode : undefined}
-            urlFilterPatterns={urlFilterEnabled ? urlFilterList : undefined}
-            urlFilterShowFeedback={urlFilterShowFeedback}
-            pdfViewerEnabled={pdfViewerEnabled}
-            zoomLevel={zoomLevel}
           />
         </>
       ) : (
@@ -2139,10 +2252,10 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
         cameraPosition={motionCameraPosition}
       />
 
-      {/* Visual Button - WebView mode only */}
+      {/* Visual Button - WebView/Media mode only */}
       {/* In button mode: button always clickable, visibility controlled by opacity */}
       {/* In tap_anywhere mode: no button shown */}
-      {displayMode === 'webview' && returnMode === 'button' && (
+      {(displayMode === 'webview' || displayMode === 'media_player') && returnMode === 'button' && (
         <TouchableOpacity 
           style={[
             styles.visualIndicator,

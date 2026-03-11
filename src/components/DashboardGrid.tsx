@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   useWindowDimensions,
+  GestureResponderEvent,
 } from 'react-native';
 import { DashboardTile } from '../types/dashboard';
 import { getColorForLabel } from '../utils/dashboardColors';
@@ -62,13 +63,35 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ tiles, onTilePress, onUse
 
   const sortedTiles = [...tiles].sort((a, b) => a.order - b.order);
 
+  // Track touch start to distinguish taps from scrolls
+  const touchStartRef = useRef<{ x: number; y: number; time: number }>({ x: 0, y: 0, time: 0 });
+  const TAP_MAX_DISTANCE = 20;
+  const TAP_MAX_DURATION = 500;
+
+  const handleTouchStart = (e: GestureResponderEvent) => {
+    touchStartRef.current = {
+      x: e.nativeEvent.pageX,
+      y: e.nativeEvent.pageY,
+      time: Date.now(),
+    };
+  };
+
+  const handleTouchEnd = (e: GestureResponderEvent) => {
+    const dx = e.nativeEvent.pageX - touchStartRef.current.x;
+    const dy = e.nativeEvent.pageY - touchStartRef.current.y;
+    const dt = Date.now() - touchStartRef.current.time;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    // Only count as tap if finger didn't move much and was quick
+    if (dist < TAP_MAX_DISTANCE && dt < TAP_MAX_DURATION && onUserInteraction) {
+      onUserInteraction({ isTap: true, x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
+    }
+  };
+
   const renderTile = ({ item }: { item: DashboardTile }) => (
     <TouchableOpacity
       style={styles.tileContainer}
-      onPress={(e) => {
-        if (onUserInteraction) {
-          onUserInteraction({ isTap: true, x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-        }
+      onPress={() => {
         onTilePress(item);
       }}
       activeOpacity={0.7}
@@ -81,7 +104,12 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ tiles, onTilePress, onUse
   );
 
   return (
-    <FlatList
+    <View
+      style={styles.gridWrapper}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
+      <FlatList
       key={`grid-${numColumns}`}
       data={sortedTiles}
       renderItem={renderTile}
@@ -90,11 +118,6 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ tiles, onTilePress, onUse
       contentContainerStyle={styles.gridContent}
       style={styles.grid}
       columnWrapperStyle={numColumns > 1 ? styles.row : undefined}
-      onTouchEnd={(e) => {
-        if (onUserInteraction) {
-          onUserInteraction({ isTap: true, x: e.nativeEvent.pageX, y: e.nativeEvent.pageY });
-        }
-      }}
       ListEmptyComponent={
         <View style={styles.emptyContainer}>
           <Text style={styles.emptyText}>
@@ -103,10 +126,14 @@ const DashboardGrid: React.FC<DashboardGridProps> = ({ tiles, onTilePress, onUse
         </View>
       }
     />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  gridWrapper: {
+    flex: 1,
+  },
   grid: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',

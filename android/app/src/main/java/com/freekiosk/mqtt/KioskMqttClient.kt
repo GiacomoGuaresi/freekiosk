@@ -259,8 +259,11 @@ class KioskMqttClient(
         try {
             val protocol = if (config.useTls) "ssl" else "tcp"
             val maskedPass = config.password?.let { p ->
-                if (p.length <= 4) "****"
-                else "${p.take(3)}${"*".repeat(p.length - 6).take(10)}${p.takeLast(3)}"
+                when {
+                    p.length <= 4 -> "****"
+                    p.length <= 6 -> "${p.take(1)}${"*".repeat(p.length - 2)}${p.takeLast(1)}"
+                    else -> "${p.take(2)}${"*".repeat((p.length - 4).coerceAtMost(10))}${p.takeLast(2)}"
+                }
             } ?: "(none)"
             Log.i(TAG, "Connecting to $protocol://${config.brokerUrl}:${config.port} as $effectiveClientId (device=$deviceId, topic=$topicId, tls=${config.useTls}, user=${config.username ?: "(none)"}, pass=$maskedPass)")
 
@@ -404,10 +407,10 @@ class KioskMqttClient(
                 .retain(true)
                 .applyWillPublish()
 
-            // Credentials
-            if (!config.username.isNullOrBlank()) {
+            // Credentials (enter auth block if either username or password is set)
+            if (!config.username.isNullOrBlank() || !config.password.isNullOrEmpty()) {
                 val authBuilder = connectBuilder.simpleAuth()
-                    .username(config.username)
+                    .username(config.username ?: "")
                 if (!config.password.isNullOrEmpty()) {
                     authBuilder.password(config.password.toByteArray())
                 }

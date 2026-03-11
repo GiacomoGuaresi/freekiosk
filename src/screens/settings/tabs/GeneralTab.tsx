@@ -15,16 +15,21 @@ import {
   UrlListEditor,
   ScheduleEventList,
   ManagedAppsSection,
+  SettingsRadioGroup,
 } from '../../../components/settings';
 import { ManagedApp } from '../../../types/managedApps';
 import { Colors, Spacing, Typography } from '../../../theme';
 import AppLauncherModule, { AppInfo } from '../../../utils/AppLauncherModule';
 import { ScheduledEvent } from '../../../types/planner';
+import type { MediaItem, MediaFitMode } from '../../../types/mediaPlayer';
+import { generateMediaItemId, detectMediaType, isLocalMedia, getMediaDisplayName } from '../../../types/mediaPlayer';
+import FilePickerModule from '../../../utils/FilePickerModule';
+import type { PickedFile } from '../../../utils/FilePickerModule';
 
 interface GeneralTabProps {
   // Display mode
-  displayMode: 'webview' | 'external_app';
-  onDisplayModeChange: (mode: 'webview' | 'external_app') => void;
+  displayMode: 'webview' | 'external_app' | 'media_player';
+  onDisplayModeChange: (mode: 'webview' | 'external_app' | 'media_player') => void;
   
   // WebView settings
   url: string;
@@ -112,6 +117,32 @@ interface GeneralTabProps {
   inactivityReturnScrollTop: boolean;
   onInactivityReturnScrollTopChange: (value: boolean) => void;
   
+  // Media Player settings
+  mediaPlayerItems: MediaItem[];
+  onMediaPlayerItemsChange: (items: MediaItem[]) => void;
+  mediaPlayerAutoPlay: boolean;
+  onMediaPlayerAutoPlayChange: (value: boolean) => void;
+  mediaPlayerLoop: boolean;
+  onMediaPlayerLoopChange: (value: boolean) => void;
+  mediaPlayerShuffle: boolean;
+  onMediaPlayerShuffleChange: (value: boolean) => void;
+  mediaPlayerImageDuration: string;
+  onMediaPlayerImageDurationChange: (value: string) => void;
+  mediaPlayerShowControls: boolean;
+  onMediaPlayerShowControlsChange: (value: boolean) => void;
+  mediaPlayerFitMode: MediaFitMode;
+  onMediaPlayerFitModeChange: (value: MediaFitMode) => void;
+  mediaPlayerBgColor: string;
+  onMediaPlayerBgColorChange: (value: string) => void;
+  mediaPlayerTransition: boolean;
+  onMediaPlayerTransitionChange: (value: boolean) => void;
+  mediaPlayerTransitionDuration: string;
+  onMediaPlayerTransitionDurationChange: (value: string) => void;
+  mediaPlayerMute: boolean;
+  onMediaPlayerMuteChange: (value: boolean) => void;
+  onPickMediaFromDevice: (type: 'video' | 'image' | 'any') => void;
+  pickingMedia: boolean;
+  
   // Navigation
   onBackToKiosk: () => void;
 }
@@ -179,6 +210,30 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
   onInactivityReturnClearCacheChange,
   inactivityReturnScrollTop,
   onInactivityReturnScrollTopChange,
+  mediaPlayerItems,
+  onMediaPlayerItemsChange,
+  mediaPlayerAutoPlay,
+  onMediaPlayerAutoPlayChange,
+  mediaPlayerLoop,
+  onMediaPlayerLoopChange,
+  mediaPlayerShuffle,
+  onMediaPlayerShuffleChange,
+  mediaPlayerImageDuration,
+  onMediaPlayerImageDurationChange,
+  mediaPlayerShowControls,
+  onMediaPlayerShowControlsChange,
+  mediaPlayerFitMode,
+  onMediaPlayerFitModeChange,
+  mediaPlayerBgColor,
+  onMediaPlayerBgColorChange,
+  mediaPlayerTransition,
+  onMediaPlayerTransitionChange,
+  mediaPlayerTransitionDuration,
+  onMediaPlayerTransitionDurationChange,
+  mediaPlayerMute,
+  onMediaPlayerMuteChange,
+  onPickMediaFromDevice,
+  pickingMedia,
   onBackToKiosk,
 }) => {
   return (
@@ -188,11 +243,12 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
         <SettingsModeSelector
           options={[
             { value: 'webview', label: 'Website', icon: 'web' },
-            { value: 'external_app', label: 'Android App', icon: 'android' },
+            { value: 'media_player', label: 'Media', icon: 'play-circle-outline' },
+            { value: 'external_app', label: 'App', icon: 'android' },
           ]}
           value={displayMode}
-          onValueChange={(value) => onDisplayModeChange(value as 'webview' | 'external_app')}
-          hint="Choose to display a website or launch an Android application"
+          onValueChange={(value) => onDisplayModeChange(value as 'webview' | 'external_app' | 'media_player')}
+          hint="Website, media player (video/images), or Android application"
         />
         
         {/* Device Owner warning for External App */}
@@ -215,17 +271,244 @@ const GeneralTab: React.FC<GeneralTabProps> = ({
       <SettingsSection variant="info">
         <Text style={styles.infoTitle}>ℹ️ How to Use</Text>
         <Text style={styles.infoText}>
-          • Configure the URL of the web page to display{`
-`}
-          • Set a secure PIN code{`
-`}
-          • Enable "Lock Mode" for full kiosk mode{`
-`}
-          • Tap 5 times on the secret button to access settings (default: bottom-right){`
-`}
-          • Enter PIN code to unlock
+          {displayMode === 'media_player' 
+            ? '• Add video or image URLs to build a playlist\n• Configure playback options (loop, shuffle, etc.)\n• Set a secure PIN code\n• Enable "Lock Mode" for full kiosk mode\n• Tap 5 times to access settings'
+            : `• Configure the URL of the web page to display\n• Set a secure PIN code\n• Enable "Lock Mode" for full kiosk mode\n• Tap 5 times on the secret button to access settings (default: bottom-right)\n• Enter PIN code to unlock`}
         </Text>
       </SettingsSection>
+      
+      {/* ===== MEDIA PLAYER SETTINGS ===== */}
+      {displayMode === 'media_player' && (
+        <>
+          {/* Media Items / Playlist */}
+          <SettingsSection title="Media Playlist" icon="play-circle-outline">
+            <SettingsInfoBox variant="info">
+              <Text style={styles.infoText}>
+                {'🎬 Add media from your device or via URL.\n'}
+                {'Supported: MP4, WebM, OGG (video) • JPG, PNG, GIF, WebP, SVG (image)\n\n'}
+                {'📱 Local files are copied to app storage for reliable playback.'}
+              </Text>
+            </SettingsInfoBox>
+            
+            {/* Pick from device buttons */}
+            <View style={styles.pickButtonsRow}>
+              <TouchableOpacity
+                style={[styles.pickButton, pickingMedia && styles.pickButtonDisabled]}
+                onPress={() => !pickingMedia && onPickMediaFromDevice('any')}
+                disabled={pickingMedia}
+              >
+                <Text style={styles.pickButtonText}>
+                  {pickingMedia ? '⏳ Picking...' : '📁 Pick from Device'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.pickButtonSmall, { backgroundColor: Colors.info }, pickingMedia && styles.pickButtonDisabled]}
+                onPress={() => !pickingMedia && onPickMediaFromDevice('video')}
+                disabled={pickingMedia}
+              >
+                <Text style={styles.pickButtonSmallText}>🎥</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.pickButtonSmall, { backgroundColor: Colors.secondary }, pickingMedia && styles.pickButtonDisabled]}
+                onPress={() => !pickingMedia && onPickMediaFromDevice('image')}
+                disabled={pickingMedia}
+              >
+                <Text style={styles.pickButtonSmallText}>🖼️</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {mediaPlayerItems.map((item, index) => (
+              <View key={item.id} style={styles.mediaItemCard}>
+                <View style={styles.mediaItemHeader}>
+                  <Text style={styles.mediaItemIndex}>{index + 1}</Text>
+                  <View style={[
+                    styles.mediaItemTypeBadge,
+                    { backgroundColor: item.type === 'video' ? Colors.info : Colors.secondary }
+                  ]}>
+                    <Text style={styles.mediaItemTypeText}>
+                      {item.type === 'video' ? '🎥 Video' : '🖼️ Image'}
+                    </Text>
+                  </View>
+                  {item.isLocal && (
+                    <View style={styles.localBadge}>
+                      <Text style={styles.localBadgeText}>📱 Local</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={styles.mediaItemDeleteBtn}
+                    onPress={() => {
+                      const toDelete = mediaPlayerItems.find(i => i.id === item.id);
+                      // If it's a local file, also delete the copied file
+                      if (toDelete?.isLocal && toDelete.url.startsWith('file://')) {
+                        FilePickerModule.deleteMediaFile(toDelete.url).catch(() => {});
+                      }
+                      const updated = mediaPlayerItems.filter(i => i.id !== item.id);
+                      onMediaPlayerItemsChange(updated);
+                    }}
+                  >
+                    <Text style={styles.mediaItemDeleteText}>✗</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                {item.isLocal ? (
+                  <View style={styles.localFileInfo}>
+                    <Text style={styles.localFileName} numberOfLines={1}>
+                      {getMediaDisplayName(item)}
+                    </Text>
+                    <Text style={styles.localFilePath} numberOfLines={1}>
+                      {item.url}
+                    </Text>
+                  </View>
+                ) : (
+                  <SettingsInput
+                    label="URL"
+                    value={item.url}
+                    onChangeText={(text) => {
+                      const updated = mediaPlayerItems.map(i => 
+                        i.id === item.id ? { ...i, url: text, type: detectMediaType(text) } : i
+                      );
+                      onMediaPlayerItemsChange(updated);
+                    }}
+                    placeholder="https://example.com/video.mp4"
+                    keyboardType="url"
+                  />
+                )}
+                
+                {item.type === 'image' && (
+                  <SettingsInput
+                    label="Display Duration (seconds)"
+                    value={item.duration ? String(item.duration) : ''}
+                    onChangeText={(text) => {
+                      const dur = parseInt(text, 10);
+                      const updated = mediaPlayerItems.map(i => 
+                        i.id === item.id ? { ...i, duration: isNaN(dur) ? undefined : dur } : i
+                      );
+                      onMediaPlayerItemsChange(updated);
+                    }}
+                    placeholder={mediaPlayerImageDuration || '10'}
+                    keyboardType="numeric"
+                    hint="Leave empty to use default duration"
+                  />
+                )}
+              </View>
+            ))}
+            
+            <SettingsButton
+              title="Add URL Entry"
+              icon="plus-circle"
+              variant="success"
+              onPress={() => {
+                const newItem: MediaItem = {
+                  id: generateMediaItemId(),
+                  url: '',
+                  type: 'video',
+                  isLocal: false,
+                };
+                onMediaPlayerItemsChange([...mediaPlayerItems, newItem]);
+              }}
+            />
+            
+            {mediaPlayerItems.length === 0 && (
+              <SettingsInfoBox variant="warning">
+                <Text style={styles.infoText}>
+                  ⚠️ Add at least one media item to use the Media Player
+                </Text>
+              </SettingsInfoBox>
+            )}
+          </SettingsSection>
+          
+          {/* Playback Settings */}
+          <SettingsSection title="Playback" icon="play">
+            <SettingsSwitch
+              label="Auto Play"
+              value={mediaPlayerAutoPlay}
+              onValueChange={onMediaPlayerAutoPlayChange}
+              hint="Automatically start playing when the screen loads"
+            />
+            
+            <SettingsSwitch
+              label="Loop Playlist"
+              value={mediaPlayerLoop}
+              onValueChange={onMediaPlayerLoopChange}
+              hint="Restart the playlist from the beginning when it ends"
+            />
+            
+            <SettingsSwitch
+              label="Shuffle"
+              value={mediaPlayerShuffle}
+              onValueChange={onMediaPlayerShuffleChange}
+              hint="Play items in random order"
+            />
+            
+            <SettingsSwitch
+              label="Mute Videos"
+              value={mediaPlayerMute}
+              onValueChange={onMediaPlayerMuteChange}
+              hint="Play all videos without audio"
+            />
+            
+            <View style={styles.rotationSpacer} />
+            <SettingsInput
+              label="Default Image Duration (seconds)"
+              value={mediaPlayerImageDuration}
+              onChangeText={onMediaPlayerImageDurationChange}
+              placeholder="10"
+              keyboardType="numeric"
+              hint="How long to display each image (1-3600s). Per-image override available above."
+            />
+          </SettingsSection>
+          
+          {/* Display Settings */}
+          <SettingsSection title="Display Options" icon="monitor">
+            <SettingsSwitch
+              label="Show Playback Controls"
+              value={mediaPlayerShowControls}
+              onValueChange={onMediaPlayerShowControlsChange}
+              hint="Show play/pause, next/prev controls (tap screen to toggle)"
+            />
+            
+            <View style={styles.rotationSpacer} />
+            <SettingsRadioGroup
+              label="Content Fit Mode"
+              options={[
+                { value: 'contain', label: 'Contain (fit within screen)' },
+                { value: 'cover', label: 'Cover (fill screen, may crop)' },
+                { value: 'fill', label: 'Fill (stretch to fit)' },
+              ]}
+              value={mediaPlayerFitMode}
+              onValueChange={(v) => onMediaPlayerFitModeChange(v as MediaFitMode)}
+            />
+            
+            <View style={styles.rotationSpacer} />
+            <SettingsInput
+              label="Background Color"
+              value={mediaPlayerBgColor}
+              onChangeText={onMediaPlayerBgColorChange}
+              placeholder="#000000"
+              hint="Hex color for areas not covered by media (e.g. #000000 for black)"
+            />
+            
+            <View style={styles.rotationSpacer} />
+            <SettingsSwitch
+              label="Crossfade Transition"
+              value={mediaPlayerTransition}
+              onValueChange={onMediaPlayerTransitionChange}
+              hint="Smooth fade transition between media items"
+            />
+            
+            {mediaPlayerTransition && (
+              <SettingsInput
+                label="Transition Duration (ms)"
+                value={mediaPlayerTransitionDuration}
+                onChangeText={onMediaPlayerTransitionDurationChange}
+                placeholder="500"
+                keyboardType="numeric"
+                hint="Duration of the crossfade effect (0-3000ms)"
+              />
+            )}
+          </SettingsSection>
+        </>
+      )}
       
       {/* URL Input (WebView mode) */}
       {displayMode === 'webview' && (
@@ -703,6 +986,112 @@ const styles = StyleSheet.create({
   },
   rotationSpacer: {
     height: Spacing.md,
+  },
+  mediaItemCard: {
+    backgroundColor: Colors.surfaceVariant,
+    borderRadius: 10,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  mediaItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.sm,
+  },
+  mediaItemIndex: {
+    ...Typography.label,
+    color: Colors.textSecondary,
+    width: 24,
+    textAlign: 'center',
+    fontSize: 14,
+  },
+  mediaItemTypeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginLeft: 8,
+  },
+  mediaItemTypeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  mediaItemDeleteBtn: {
+    marginLeft: 'auto',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.errorLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mediaItemDeleteText: {
+    color: Colors.error,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  pickButtonsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: Spacing.md,
+  },
+  pickButton: {
+    flex: 1,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickButtonDisabled: {
+    opacity: 0.5,
+  },
+  pickButtonText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  pickButtonSmall: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickButtonSmallText: {
+    fontSize: 20,
+  },
+  localBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    backgroundColor: Colors.successLight,
+    marginLeft: 6,
+  },
+  localBadgeText: {
+    color: Colors.success,
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  localFileInfo: {
+    backgroundColor: Colors.surface,
+    borderRadius: 8,
+    padding: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+  },
+  localFileName: {
+    ...Typography.label,
+    color: Colors.textPrimary,
+    marginBottom: 2,
+  },
+  localFilePath: {
+    ...Typography.body,
+    color: Colors.textSecondary,
+    fontSize: 11,
   },
 });
 

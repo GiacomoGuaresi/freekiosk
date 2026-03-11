@@ -73,6 +73,12 @@ class MainActivity : ReactActivity() {
     // Keep screen always on
     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+    // Extend content into display cutout areas to prevent OEM chrome from appearing (#94)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+      window.attributes.layoutInDisplayCutoutMode =
+        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+    }
+
     devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
     adminComponent = ComponentName(this, DeviceAdminReceiver::class.java)
 
@@ -97,6 +103,9 @@ class MainActivity : ReactActivity() {
     ensureBootReceiverEnabled()
     hideSystemUI()
     checkAndStartLockTask()
+
+    // Start KioskWatchdogService (#96) — survives OOM kills via START_STICKY
+    startKioskWatchdogIfNeeded()
 
     // If started from HomeActivity (External App Mode at boot),
     // move to background so the external app stays in foreground
@@ -134,13 +143,8 @@ class MainActivity : ReactActivity() {
       blockAutoRelaunch = true
       DebugLog.d("MainActivity", "handleNavigationIntent: set blockAutoRelaunch=true (pin=$shouldNavigateToPin, voluntary=$isVoluntary)")
     }
-    
-    if (shouldNavigateToPin) {
-      // Send event to React Native to navigate to PIN screen
-      Handler(Looper.getMainLooper()).postDelayed({
-        sendNavigateToPinEvent()
-      }, 500) // Small delay to ensure React Native is ready
-    }
+    // NOTE: navigateToPin event is sent directly by OverlayService via KioskModule.
+    // No delayed duplicate send needed here - it caused double-navigation issues.
   }
 
   private fun sendNavigateToPinEvent() {
@@ -208,34 +212,44 @@ class MainActivity : ReactActivity() {
 
   private fun startLockTaskIfPossible() {
     if (devicePolicyManager.isDeviceOwnerApp(packageName)) {
-      // Mode Device Owner: Lock Task complet avec whitelist
-      enableKioskRestrictions()
+      try {
+        // Mode Device Owner: Lock Task complet avec whitelist
+        enableKioskRestrictions()
 
-      // Build whitelist: toujours FreeKiosk, + app externe si configurée, + managed apps
-      val whitelist = mutableListOf(packageName)
+        // Build whitelist: toujours FreeKiosk, + app externe si configurée, + managed apps
+        val whitelist = mutableListOf(packageName)
 
-      if (isExternalAppMode && !externalAppPackage.isNullOrEmpty()) {
+        if (isExternalAppMode && !externalAppPackage.isNullOrEmpty()) {
+          try {
+            packageManager.getPackageInfo(externalAppPackage!!, 0)
+            whitelist.add(externalAppPackage!!)
+            DebugLog.d("MainActivity", "External app added to whitelist: $externalAppPackage")
+          } catch (e: Exception) {
+            DebugLog.errorProduction("MainActivity", "External app not found: $externalAppPackage")
+          }
+        }
+
+        // Add all managed apps to lock task whitelist
+        whitelist.addAll(getManagedAppPackages())
+        val uniqueWhitelist = whitelist.distinct()
+
+        // Configurer la whitelist Lock Task
+        devicePolicyManager.setLockTaskPackages(adminComponent, uniqueWhitelist.toTypedArray())
+
+        // Lancer Lock Task sur MainActivity
+        // Avec la whitelist, l'utilisateur peut naviguer entre FreeKiosk et l'app externe
+        // Mais ne peut PAS sortir vers d'autres apps, launcher, ou paramètres
+        startLockTask()
+        DebugLog.d("MainActivity", "Lock task started (Device Owner) with whitelist: $uniqueWhitelist")
+      } catch (e: SecurityException) {
+        DebugLog.errorProduction("MainActivity", "Device Owner lock task failed (admin invalid?): ${e.message}")
+        // Fall back to screen pinning
         try {
-          packageManager.getPackageInfo(externalAppPackage!!, 0)
-          whitelist.add(externalAppPackage!!)
-          DebugLog.d("MainActivity", "External app added to whitelist: $externalAppPackage")
-        } catch (e: Exception) {
-          DebugLog.errorProduction("MainActivity", "External app not found: $externalAppPackage")
+          startLockTask()
+        } catch (e2: Exception) {
+          DebugLog.errorProduction("MainActivity", "Fallback screen pinning also failed: ${e2.message}")
         }
       }
-
-      // Add all managed apps to lock task whitelist
-      whitelist.addAll(getManagedAppPackages())
-      val uniqueWhitelist = whitelist.distinct()
-
-      // Configurer la whitelist Lock Task
-      devicePolicyManager.setLockTaskPackages(adminComponent, uniqueWhitelist.toTypedArray())
-
-      // Lancer Lock Task sur MainActivity
-      // Avec la whitelist, l'utilisateur peut naviguer entre FreeKiosk et l'app externe
-      // Mais ne peut PAS sortir vers d'autres apps, launcher, ou paramètres
-      startLockTask()
-      DebugLog.d("MainActivity", "Lock task started (Device Owner) with whitelist: $uniqueWhitelist")
     } else {
       // Mode non-Device Owner: Screen Pinning manuel (demande confirmation utilisateur)
       try {
@@ -389,13 +403,9 @@ class MainActivity : ReactActivity() {
     // Il sera relancé automatiquement quand on relance l'app externe
     stopOverlayService()
 
-    // Si retour volontaire avec navigateToPin, envoyer l'événement pour aller au PIN
-    // (l'événement est déjà envoyé par OverlayService, mais on le renvoie au cas où)
-    if (isVoluntaryReturn && navigateToPin) {
-      Handler(Looper.getMainLooper()).postDelayed({
-        sendNavigateToPinEvent()
-      }, 300) // Délai pour laisser React Native se stabiliser
-    }
+    // NOTE: navigateToPin event is now sent directly by OverlayService via KioskModule.
+    // The backup send from handleNavigationIntent (500ms) handles edge cases.
+    // No need for a third send here.
 
     // Notifier React Native qu'on est revenu sur FreeKiosk (depuis une app externe)
     // NE PAS envoyer si c'est un retour volontaire (l'overlay l'a déjà envoyé)
@@ -702,6 +712,27 @@ class MainActivity : ReactActivity() {
       }
     } catch (e: Exception) {
       DebugLog.d("MainActivity", "Error ensuring BootReceiver state: ${e.message}")
+    }
+  }
+
+  /**
+   * Start KioskWatchdogService if kiosk mode is enabled (#96).
+   * Uses START_STICKY so Android restarts FreeKiosk after an OOM kill.
+   */
+  private fun startKioskWatchdogIfNeeded() {
+    try {
+      val kioskEnabled = isKioskEnabled()
+      if (!kioskEnabled) return
+
+      val serviceIntent = Intent(this, KioskWatchdogService::class.java)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        startForegroundService(serviceIntent)
+      } else {
+        startService(serviceIntent)
+      }
+      DebugLog.d("MainActivity", "KioskWatchdogService started")
+    } catch (e: Exception) {
+      DebugLog.d("MainActivity", "Error starting KioskWatchdogService: ${e.message}")
     }
   }
 
@@ -1292,6 +1323,47 @@ class MainActivity : ReactActivity() {
     } catch (e: Exception) {
       android.util.Log.e("MainActivity", "Error registering volume change receiver: ${e.message}")
     }
+  }
+
+  /**
+   * Prevent OEM multi-window/freeform controls from closing the app (#94).
+   * Lenovo ZUI (and similar OEMs) show a "three-dot" overlay that can close apps in
+   * windowed mode. If multi-window is triggered despite resizeableActivity=false,
+   * immediately re-launch as full-screen single-task.
+   * Only active when kiosk mode is enabled to avoid interfering with normal usage
+   * or external app mode (where FreeKiosk is in the background).
+   */
+  override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: android.content.res.Configuration) {
+    super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+    if (isInMultiWindowMode && isKioskEnabled()) {
+      DebugLog.d("MainActivity", "Multi-window detected in kiosk mode — forcing full-screen relaunch")
+      // Re-launch ourselves as a full-screen single task to exit multi-window
+      val relaunch = Intent(this, MainActivity::class.java)
+      relaunch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+      startActivity(relaunch)
+    }
+  }
+
+  /**
+   * Block finish() when kiosk lock task is active (#94).
+   * Prevents OEM UI elements (Lenovo ZUI "X" button, freeform close) from closing the app.
+   * The check uses isTaskLocked() (not isKioskEnabled()) so that intentional exits
+   * via exitKioskMode — which calls stopLockTask() before finish() — still work.
+   */
+  override fun finish() {
+    if (isTaskLocked()) {
+      DebugLog.d("MainActivity", "finish() blocked — lock task active")
+      return
+    }
+    super.finish()
+  }
+
+  override fun finishAndRemoveTask() {
+    if (isTaskLocked()) {
+      DebugLog.d("MainActivity", "finishAndRemoveTask() blocked — lock task active")
+      return
+    }
+    super.finishAndRemoveTask()
   }
 
   /**

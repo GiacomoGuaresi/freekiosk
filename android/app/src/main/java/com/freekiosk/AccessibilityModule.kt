@@ -99,17 +99,26 @@ class AccessibilityModule(private val reactContext: ReactApplicationContext) :
             if (!currentServices.contains(serviceName)) {
                 val newServices = if (currentServices.isEmpty()) serviceName 
                                   else "$currentServices:$serviceName"
-                Settings.Secure.putString(
-                    reactContext.contentResolver,
-                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
-                    newServices
-                )
-                Settings.Secure.putString(
-                    reactContext.contentResolver,
-                    Settings.Secure.ACCESSIBILITY_ENABLED,
-                    "1"
-                )
-                Log.d(TAG, "Accessibility service enabled via Device Owner: $serviceName")
+                try {
+                    Settings.Secure.putString(
+                        reactContext.contentResolver,
+                        Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+                        newServices
+                    )
+                    Settings.Secure.putString(
+                        reactContext.contentResolver,
+                        Settings.Secure.ACCESSIBILITY_ENABLED,
+                        "1"
+                    )
+                    Log.d(TAG, "Accessibility service enabled via Device Owner: $serviceName")
+                } catch (se: SecurityException) {
+                    Log.w(TAG, "WRITE_SECURE_SETTINGS not granted, cannot auto-enable: ${se.message}")
+                    promise.reject("WRITE_SECURE_SETTINGS_REQUIRED",
+                        "The WRITE_SECURE_SETTINGS permission is required to auto-enable the accessibility service.\n\n" +
+                        "Grant it via ADB:\nadb shell pm grant ${reactContext.packageName} android.permission.WRITE_SECURE_SETTINGS\n\n" +
+                        "This only needs to be done once. Alternatively, enable the service manually in Android Accessibility Settings.")
+                    return
+                }
             }
             
             promise.resolve(true)
