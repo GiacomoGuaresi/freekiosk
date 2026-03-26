@@ -7,8 +7,6 @@
 > [!TIP]
 > Start from [Installation Guide](Installation) for first deployment, then use this page for edge cases.
 
----
-
 ## Installation
 
 **Q: Do I need to root my tablet?**
@@ -22,8 +20,6 @@
 
 **Q: Which Android versions are supported?**
 - **A:** Android 8.0+ (API 26 and above).
-
----
 
 ## Device Owner
 
@@ -48,8 +44,6 @@
 **Q: Does Device Owner void warranty?**
 - **A:** No. Device Owner is an official Android feature with no system modifications.
 
----
-
 ## Usage
 
 **Q: How to access settings in kiosk mode?**
@@ -73,8 +67,6 @@
 **Q: Can I rotate between multiple URLs?**
 - **A:** Not yet, but planned for v1.1! You can use a single URL pointing to a page that rotates content.
 
----
-
 ## Compatibility
 
 **Q: Which tablets are supported?**
@@ -97,8 +89,6 @@
 
 **Q: Does it work on Chromebooks?**
 - **A:** No. FreeKiosk is Android-only.
-
----
 
 ## Troubleshooting
 
@@ -141,8 +131,6 @@
 **Q: Are my settings preserved after updating FreeKiosk?**
 - **A:** **Yes!** All your settings (URL, PIN, display mode, etc.) are stored locally on your device and are preserved when updating FreeKiosk. You don't need to reconfigure anything after an update.
 
----
-
 ## Dashboard Mode
 
 **Q: What is Dashboard Mode?**
@@ -160,8 +148,6 @@
 **Q: How many tiles can I create?**
 - **A:** There is no hard limit. The grid adapts to the number of tiles.
 
----
-
 ## Features
 
 **Q: Can I customize the PIN length?**
@@ -178,8 +164,6 @@
 
 **Q: Can I use FreeKiosk offline?**
 - **A:** Yes! Once configured, FreeKiosk works offline (your URL must be accessible offline too).
-
----
 
 ## Comparison
 
@@ -199,8 +183,6 @@
 **Q: Will FreeKiosk always be free?**
 - **A:** Yes! The app will always be 100% free and open-source. We may offer optional paid cloud services (FreeKiosk Cloud) in the future, but the core app stays free forever.
 
----
-
 ## Development
 
 **Q: Can I contribute?**
@@ -214,8 +196,6 @@
 
 **Q: Can I self-host FreeKiosk?**
 - **A:** The app is self-contained (no server needed). Future cloud features will offer self-hosting options.
-
----
 
 ## Roadmap
 
@@ -237,8 +217,6 @@
 
 > See full [Roadmap](../README.md#roadmap).
 
----
-
 ## Support
 
 **Q: Where can I get help?**
@@ -257,7 +235,5 @@
 | **Report bugs** | [Open Issue](https://github.com/rushb-fr/freekiosk/issues) |
 | **Contribute code** | [Contributing Guide](../CONTRIBUTING.md) |
 | **Buy us coffee** | [Ko-fi](https://ko-fi.com/rushb) (coming soon) |
-
----
 
 **Didn't find your answer? Ask in [Discussions](https://github.com/rushb-fr/freekiosk/discussions)!**
