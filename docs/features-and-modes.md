@@ -45,7 +45,7 @@ _A quick map of how FreeKiosk can run, lock, and present content on Android tabl
 
 ### Media / Multi-App Enhancements
 
-Recent versions include media-player and multi-app deployment improvements. See release notes in [Roadmap and Changelog](roadmap-and-changelog.md).
+Recent versions include media-player and multi-app deployment improvements. See release notes in [Roadmap and Changelog](Roadmap-and-Changelog).
 
 ## 🔐 Security and Control
 

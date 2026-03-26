@@ -26,8 +26,8 @@ Both can run simultaneously.
 
 | Channel | Best when | Reference |
 |---|---|---|
-| REST API | You want request/response control on demand | [REST API Documentation](rest-api.md) |
-| MQTT | You want push telemetry + Home Assistant discovery | [MQTT Documentation](MQTT.md) |
+| REST API | You want request/response control on demand | [REST API Documentation](REST-API) |
+| MQTT | You want push telemetry + Home Assistant discovery | [MQTT Documentation](MQTT) |
 
 ## REST API
 
@@ -40,7 +40,7 @@ Highlights:
 
 Reference:
 
-- [REST API Documentation](rest-api.md)
+- [REST API Documentation](REST-API)
 
 ## MQTT
 
@@ -54,7 +54,7 @@ Highlights:
 
 Reference:
 
-- [MQTT Documentation](MQTT.md)
+- [MQTT Documentation](MQTT)
 
 ## Headless Setup
 
@@ -62,4 +62,4 @@ You can provision integrations without UI using ADB intent parameters.
 
 Reference:
 
-- [ADB Configuration Guide](adb-configuration.md)
+- [ADB Configuration Guide](ADB-Configuration)

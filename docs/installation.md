@@ -344,7 +344,7 @@ A: Should work, but not officially tested. Device Owner setup may differ.
 
 ## Need Help?
 
-- 📖 Check [FAQ](faq.md)
+- 📖 Check [FAQ](FAQ)
 - 💬 Open a [Discussion](https://github.com/rushb-fr/freekiosk/discussions)
 - 🐛 Report a [Bug](https://github.com/rushb-fr/freekiosk/issues)
 - 📧 Email: support@freekiosk.app

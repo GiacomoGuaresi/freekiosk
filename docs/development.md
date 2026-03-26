@@ -50,11 +50,11 @@ Output APK:
 
 - [Contributing Guide](../CONTRIBUTING.md)
 - [Issue Tracker](https://github.com/rushb-fr/freekiosk/issues)
-- [FAQ](faq.md)
+- [FAQ](FAQ)
 
 ## Related Technical Docs
 
-- [Install Guide](installation.md)
-- [ADB Configuration](adb-configuration.md)
-- [REST API](rest-api.md)
-- [MQTT](MQTT.md)
+- [Install Guide](Installation)
+- [ADB Configuration](ADB-Configuration)
+- [REST API](REST-API)
+- [MQTT](MQTT)

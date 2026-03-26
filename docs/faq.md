@@ -23,7 +23,7 @@ _Common questions about setup, lockdown, compatibility, and operations._
 **A:** No! FreeKiosk uses Android's official Device Owner API. No root required.
 
 ### Q: Do I need Android Studio?
-**A:** No! Just ADB tool (15 MB download). See [Installation Guide](installation.md).
+**A:** No! Just ADB tool (15 MB download). See [Installation Guide](Installation).
 
 ### Q: Can I install from Play Store?
 **A:** Yes! Search "FreeKiosk" on Google Play Store, or download APK from [Releases](https://github.com/rushb-fr/freekiosk/releases).
@@ -243,7 +243,7 @@ See full [Roadmap](../README.md#-roadmap).
 ## Support
 
 ### Q: Where can I get help?
-- 📖 Read [Installation Guide](installation.md)
+- 📖 Read [Installation Guide](Installation)
 - 💬 [GitHub Discussions](https://github.com/rushb-fr/freekiosk/discussions)
 - 🐛 [Report Bug](https://github.com/rushb-fr/freekiosk/issues)
 - 📧 Email: support@freekiosk.app

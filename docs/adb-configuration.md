@@ -546,6 +546,6 @@ adb shell pm clear com.freekiosk
 
 ## See Also
 
-- [REST API Documentation](rest-api.md) - Remote control via HTTP
-- [MDM Specification](MDM_SPEC.md) - Enterprise deployment
-- [Installation Guide](installation.md) - Manual setup instructions
+- [REST API Documentation](REST-API) - Remote control via HTTP
+- [MDM Specification](MDM-SPEC) - Enterprise deployment
+- [Installation Guide](Installation) - Manual setup instructions

@@ -42,7 +42,7 @@ adb shell am start -n com.freekiosk/.MainActivity \
     --es rest_api_key "your_secret_key"
 ```
 
-See [ADB Configuration Guide](adb-configuration.md) for full headless provisioning.
+See [ADB Configuration Guide](ADB-Configuration) for full headless provisioning.
 
 ---
 
@@ -970,9 +970,9 @@ Common errors:
 
 ## See Also
 
-- [ADB Configuration Guide](adb-configuration.md) - Headless provisioning via ADB
-- [MDM Specification](MDM_SPEC.md) - Enterprise deployment
-- [Installation Guide](installation.md) - Manual setup
+- [ADB Configuration Guide](ADB-Configuration) - Headless provisioning via ADB
+- [MDM Specification](MDM-SPEC) - Enterprise deployment
+- [Installation Guide](Installation) - Manual setup
 
 ---
 

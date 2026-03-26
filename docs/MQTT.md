@@ -272,7 +272,7 @@ Commands are sent by publishing to `{baseTopic}/{topicId}/set/{entity}`.
 | `keyboard_combo` | keyboardCombo | combo string (e.g. `ctrl+c`) | Press a key combination |
 | `keyboard_text` | keyboardText | text string | Type text into focused field |
 
-> Commands have full parity with the [REST API](rest-api.md). Both interfaces dispatch through the same native command handler. Remote control and keyboard commands are handled natively via the AccessibilityService (cross-app) or Activity key dispatch (in-app). TTS and Toast are also handled natively (no JS round-trip).
+> Commands have full parity with the [REST API](REST-API). Both interfaces dispatch through the same native command handler. Remote control and keyboard commands are handled natively via the AccessibilityService (cross-app) or Activity key dispatch (in-app). TTS and Toast are also handled natively (no JS round-trip).
 
 ---
 
@@ -535,6 +535,6 @@ entities:
 
 ## See Also
 
-- [REST API Documentation](rest-api.md) — HTTP-based integration (polling)
-- [ADB Configuration Guide](adb-configuration.md) — Headless provisioning via ADB
-- [Installation Guide](installation.md) — Device setup
+- [REST API Documentation](REST-API) — HTTP-based integration (polling)
+- [ADB Configuration Guide](ADB-Configuration) — Headless provisioning via ADB
+- [Installation Guide](Installation) — Device setup
