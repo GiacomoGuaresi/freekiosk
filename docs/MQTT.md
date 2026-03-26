@@ -2,91 +2,122 @@
 
 # 📡 FreeKiosk MQTT Documentation
 
-_Real-time telemetry, command topics, and Home Assistant auto-discovery._
+**Real-time telemetry, command topics, and Home Assistant auto-discovery**
 
 <p>
-  <a href="README.md">Docs Home</a> •
-  <a href="INTEGRATIONS.md">Integrations</a> •
-  <a href="rest-api.md">REST API</a>
+  <a href="README.md">📚 Docs Home</a> •
+  <a href="INTEGRATIONS.md">🔌 Integrations</a> •
+  <a href="rest-api.md">🌐 REST API</a>
 </p>
 
 </div>
 
 FreeKiosk includes a native MQTT client for real-time integration with **Home Assistant** and other MQTT-based platforms.
 
-## Overview
+## 📋 Overview
 
-- **Protocol**: MQTT v5 / v3.1.1 (HiveMQ Client)
-- **Default Port**: 1883
-- **Discovery**: Home Assistant MQTT Discovery (auto-creates device + entities)
-- **Push-based**: Real-time status updates (no polling needed)
-- **LWT**: Availability tracking via Last Will and Testament
+<div align="center">
+
+| ⚙️ Feature | 📋 Details |
+|---|---|
+| **🔄 Protocol** | MQTT v5 / v3.1.1 (HiveMQ Client) |
+| **🔌 Default Port** | 1883 |
+| **🏠 Discovery** | Home Assistant MQTT Discovery (auto-creates device + entities) |
+| **📡 Push-based** | Real-time status updates (no polling needed) |
+| **📱 LWT** | Availability tracking via Last Will and Testament |
+
+</div>
 
 > [!TIP]
 > **MQTT vs REST API**: MQTT is push-based — the tablet publishes status updates automatically every N seconds. The REST API requires polling. MQTT is the preferred integration for Home Assistant. Both can run simultaneously.
 
-## Enabling MQTT
+## 🔧 Enabling MQTT
 
-### Via UI
-1. Open FreeKiosk Settings (5-tap + PIN)
-2. Go to **Advanced** tab
-3. Scroll to **MQTT** section
-4. Enable **MQTT**
-5. Enter your broker URL (e.g. `192.168.1.100`)
-6. Configure port, username, password as needed
-7. Press **Connect** button
-8. The connection status indicator shows Connected/Disconnected
+### 📱 Via UI
 
+<div align="center">
+
+| 📋 Step | 🎯 Action |
+|---|---|
+| **1️⃣ Access Settings** | 5-tap + PIN to enter FreeKiosk settings |
+| **2️⃣ Advanced Tab** | Go to **Advanced** tab |
+| **3️⃣ MQTT Section** | Scroll to **MQTT** section |
+| **4️⃣ Enable MQTT** | Toggle **MQTT** switch |
+| **5️⃣ Configure Broker** | Enter broker URL (e.g. `192.168.1.100`) |
+| **6️⃣ Set Credentials** | Configure port, username, password |
+| **7️⃣ Connect** | Press **Connect** button |
+| **8️⃣ Verify Status** | Check connection indicator shows Connected |
+
+</div>
+
+> [!NOTE]
 > Settings are saved automatically as you type. Connection is only established when you press "Connect" — no auto-reconnect on every keystroke.
 
-### Via Backup/Restore
+### 💾 Via Backup/Restore
+
 MQTT settings are included in FreeKiosk backup/restore. You can configure one device and export the configuration to others.
 
 ---
 
-## Configuration Options
+## ⚙️ Configuration Options
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| **Enable MQTT** | Off | Master toggle for MQTT client |
-| **Broker URL** | *(empty)* | MQTT broker hostname or IP address (required) |
-| **Port** | 1883 | MQTT broker port (1-65535) |
-| **Username** | *(empty)* | MQTT username (optional) |
-| **Password** | *(empty)* | MQTT password (stored in Android Keychain, optional) |
-| **Client ID** | *(auto)* | MQTT client ID (auto-generated as `freekiosk_{deviceId}` if empty) |
-| **Device Name** | *(empty)* | Friendly name used in MQTT topics and HA device name (e.g. "lobby", "entrance"). If empty, uses Android ID. |
-| **Base Topic** | `freekiosk` | Base MQTT topic prefix for this device |
-| **Discovery Prefix** | `homeassistant` | Home Assistant MQTT discovery prefix |
-| **Status Interval** | 30 | How often to publish status (5-3600 seconds) |
-| **Allow Remote Control** | On | Enable commands via MQTT (brightness, reload, etc.) |
-| **Always-on Motion Detection** | Off | Run camera-based motion detection continuously (higher battery usage) |
+<div align="center">
+
+| 📋 Setting | 🔧 Default | 📝 Description |
+|---|---|---|
+| **🔌 Enable MQTT** | Off | Master toggle for MQTT client |
+| **🌐 Broker URL** | *(empty)* | MQTT broker hostname or IP address (required) |
+| **🔌 Port** | 1883 | MQTT broker port (1-65535) |
+| **👤 Username** | *(empty)* | MQTT username (optional) |
+| **🔐 Password** | *(empty)* | MQTT password (stored in Android Keychain, optional) |
+| **🆔 Client ID** | *(auto)* | MQTT client ID (auto-generated as `freekiosk_{deviceId}` if empty) |
+| **📱 Device Name** | *(empty)* | Friendly name used in MQTT topics and HA device name (e.g. "lobby", "entrance"). If empty, uses Android ID. |
+| **📂 Base Topic** | `freekiosk` | Base MQTT topic prefix for this device |
+| **🏠 Discovery Prefix** | `homeassistant` | Home Assistant MQTT discovery prefix |
+| **⏰ Status Interval** | 30 | How often to publish status (5-3600 seconds) |
+| **🎮 Allow Remote Control** | On | Enable commands via MQTT (brightness, reload, etc.) |
+| **👁️ Always-on Motion Detection** | Off | Run camera-based motion detection continuously (higher battery usage) |
+
+</div>
 
 ---
 
-## Topic Structure
+## 📂 Topic Structure
 
 For a device with `deviceName = lobby` (or `deviceId` if no name set) and default base topic `freekiosk`:
 
-| Purpose | Topic | QoS | Retained |
-|---------|-------|-----|----------|
-| Availability (LWT) | `freekiosk/lobby/availability` | 1 | Yes |
-| State (all data) | `freekiosk/lobby/state` | 0 | Yes |
-| Commands | `freekiosk/lobby/set/{entity}` | 1 | No |
-| Discovery | `homeassistant/{component}/freekiosk_{deviceId}/{objectId}/config` | 1 | Yes |
+<div align="center">
 
-### Topic ID
+| 🎯 Purpose | 📂 Topic | 📊 QoS | 💾 Retained |
+|---|---|---|---|
+| **📱 Availability (LWT)** | `freekiosk/lobby/availability` | 1 | Yes |
+| **📊 State (all data)** | `freekiosk/lobby/state` | 0 | Yes |
+| **🎮 Commands** | `freekiosk/lobby/set/{entity}` | 1 | No |
+| **🏠 Discovery** | `homeassistant/{component}/freekiosk_{deviceId}/{objectId}/config` | 1 | Yes |
+
+</div>
+
+### 🆔 Topic ID
 
 The topic identifier is either the configured **Device Name** (sanitized: lowercased, spaces replaced with underscores) or the `ANDROID_ID` if no name is set. This makes topics human-readable when using device names (e.g. `freekiosk/lobby/state` instead of `freekiosk/9774d56d682e549c/state`).
 
-### Availability
+### 📱 Availability
 
-- **Online**: Published on successful connection (`"online"`, retained)
-- **Offline**: Published via LWT on unexpected disconnect (`"offline"`, retained)
-- **Graceful disconnect**: Publishes `"offline"` before disconnecting
+<div align="center">
 
-### State
+| 📋 Status | 📡 Action | 💾 Retained |
+|---|---|---|
+| **🟢 Online** | Published on successful connection | `"online"` |
+| **🔴 Offline** | Published via LWT on unexpected disconnect | `"offline"` |
+| **👋 Graceful disconnect** | Publishes before disconnecting | `"offline"` |
+
+</div>
+
+### 📊 State
 
 A JSON object published periodically (default: every 30 seconds) containing all device data:
+
+<div align="center">
 
 ```json
 {
@@ -130,182 +161,242 @@ A JSON object published periodically (default: every 30 seconds) containing all 
 }
 ```
 
+</div>
+
 ---
 
-## Home Assistant MQTT Discovery
+## 🏠 Home Assistant MQTT Discovery
 
 FreeKiosk automatically publishes [MQTT Discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery) configurations on connect/reconnect. All entities appear under a single device in Home Assistant.
 
-### Prerequisites
+### 📋 Prerequisites
 
-1. Home Assistant with [MQTT integration](https://www.home-assistant.io/integrations/mqtt/) configured
-2. An MQTT broker (e.g. Mosquitto) accessible by both HA and the tablet
-3. MQTT Discovery enabled in HA (enabled by default)
+<div align="center">
 
-### Device
+| ✅ Requirement | 📋 Details |
+|---|---|
+| **🏠 Home Assistant** | With [MQTT integration](https://www.home-assistant.io/integrations/mqtt/) configured |
+| **📡 MQTT Broker** | Accessible by both HA and the tablet (e.g. Mosquitto) |
+| **🔍 Discovery** | MQTT Discovery enabled in HA (enabled by default) |
+
+</div>
+
+### 📱 Device
 
 All entities are grouped under one HA device:
 
-| Field | Value |
-|-------|-------|
-| Name | FreeKiosk {deviceName} *(or FreeKiosk {deviceId} if no name set)* |
-| Model | FreeKiosk |
-| Manufacturer | FreeKiosk |
-| SW Version | *(app version)* |
-| Configuration URL | `http://{localIp}:8080` |
+<div align="center">
 
-### Entities
+| 📋 Field | 📋 Value |
+|---|---|
+| **📛 Name** | FreeKiosk {deviceName} *(or FreeKiosk {deviceId} if no name set)* |
+| **📱 Model** | FreeKiosk |
+| **🏭 Manufacturer** | FreeKiosk |
+| **🔢 SW Version** | *(app version)* |
+| **🔗 Configuration URL** | `http://{localIp}:8080` |
 
-#### Sensors (11)
+</div>
 
-| Entity | Value Template | Device Class | Unit |
-|--------|---------------|--------------|------|
-| Battery Level | `battery.level` | battery | % |
-| Brightness | `screen.brightness` | — | % |
-| WiFi SSID | `wifi.ssid` | — | — |
-| WiFi Signal | `wifi.signalLevel` | — | % |
-| Light Sensor | `sensors.light` | illuminance | lx |
-| IP Address | `device.ip` | — | — |
-| App Version | `device.version` | — | — |
-| Memory Used | `memory.usedPercent` | — | % |
-| Storage Free | `storage.availableMB` | — | MB |
-| Current URL | `webview.currentUrl` | — | — |
-| Volume | `audio.volume` | — | % |
+### 🎛️ Entities
 
-#### Binary Sensors (6)
+#### 📊 Sensors (11)
 
-| Entity | Value Template | Device Class |
-|--------|---------------|--------------|
-| Screen | `screen.on` | power |
-| Screensaver | `screen.screensaverActive` | — |
-| Battery Charging | `battery.charging` | battery_charging |
-| Kiosk Mode | `device.kioskMode` | — |
-| Device Owner | `device.isDeviceOwner` | — |
-| Motion | `webview.motionDetected` | motion |
+<div align="center">
 
-#### Number Controls (2)
+| 🎛️ Entity | 📋 Value Template | 📱 Device Class | 📏 Unit |
+|---|---|---|---|
+| **🔋 Battery Level** | `battery.level` | battery | % |
+| **💡 Brightness** | `screen.brightness` | — | % |
+| **📶 WiFi SSID** | `wifi.ssid` | — | — |
+| **📶 WiFi Signal** | `wifi.signalLevel` | — | % |
+| **💡 Light Sensor** | `sensors.light` | illuminance | lx |
+| **🌐 IP Address** | `device.ip` | — | — |
+| **🔢 App Version** | `device.version` | — | — |
+| **🧠 Memory Used** | `memory.usedPercent` | — | % |
+| **💾 Storage Free** | `storage.availableMB` | — | MB |
+| **🌐 Current URL** | `webview.currentUrl` | — | — |
+| **🔊 Volume** | `audio.volume` | — | % |
 
-| Entity | Command Topic | Min | Max | Unit |
-|--------|--------------|-----|-----|------|
-| Brightness Control | `.../set/brightness` | 0 | 100 | % |
-| Volume Control | `.../set/volume` | 0 | 100 | % |
+</div>
 
-#### Switches (3)
+#### 🔘 Binary Sensors (6)
 
-| Entity | Command Topic | Payload |
-|--------|--------------|---------|
-| Screen Power | `.../set/screen` | ON / OFF |
-| Screensaver | `.../set/screensaver` | ON / OFF |
-| Always-on Motion Detection | `.../set/motion_always_on` | ON / OFF |
+<div align="center">
 
-#### Buttons (14)
+| 🎛️ Entity | 📋 Value Template | 📱 Device Class |
+|---|---|---|
+| **📱 Screen** | `screen.on` | power |
+| **💤 Screensaver** | `screen.screensaverActive` | — |
+| **🔋 Battery Charging** | `battery.charging` | battery_charging |
+| **🔒 Kiosk Mode** | `device.kioskMode` | — |
+| **🏢 Device Owner** | `device.isDeviceOwner` | — |
+| **👁️ Motion** | `webview.motionDetected` | motion |
 
-| Entity | Command Topic | Icon |
-|--------|--------------|------|
-| Reload | `.../set/reload` | mdi:reload |
-| Wake | `.../set/wake` | mdi:alarm |
-| Reboot | `.../set/reboot` | mdi:restart |
-| Clear Cache | `.../set/clear_cache` | mdi:delete-sweep |
-| Lock | `.../set/lock` | mdi:lock |
-| Remote Up | `.../set/remote_up` | mdi:arrow-up-bold |
-| Remote Down | `.../set/remote_down` | mdi:arrow-down-bold |
-| Remote Left | `.../set/remote_left` | mdi:arrow-left-bold |
-| Remote Right | `.../set/remote_right` | mdi:arrow-right-bold |
-| Remote Select | `.../set/remote_select` | mdi:radiobox-marked |
-| Remote Back | `.../set/remote_back` | mdi:arrow-left-circle |
-| Remote Home | `.../set/remote_home` | mdi:home |
-| Remote Menu | `.../set/remote_menu` | mdi:menu |
-| Remote Play/Pause | `.../set/remote_playpause` | mdi:play-pause |
+</div>
 
-#### Text (6)
+#### 🔢 Number Controls (2)
 
-| Entity | Command Topic | Description |
-|--------|--------------|-------------|
-| Navigate URL | `.../set/url` | Navigate WebView to a URL |
-| Text to Speech | `.../set/tts` | Speak text aloud on the tablet |
-| Toast Message | `.../set/toast` | Show a toast notification on screen |
-| Keyboard Key | `.../set/keyboard_key` | Press a single key (e.g. `enter`, `a`, `f5`) |
-| Keyboard Combo | `.../set/keyboard_combo` | Press a key combination (e.g. `ctrl+c`, `alt+f4`) |
-| Keyboard Text | `.../set/keyboard_text` | Type a text string into focused field |
+<div align="center">
 
-**Total: 42 entities** auto-discovered in Home Assistant.
+| 🎛️ Entity | 📋 Command Topic | 🔢 Min | 🔢 Max | 📏 Unit |
+|---|---|---|---|---|
+| **💡 Brightness Control** | `.../set/brightness` | 0 | 100 | % |
+| **🔊 Volume Control** | `.../set/volume` | 0 | 100 | % |
+
+</div>
+
+#### 🔘 Switches (3)
+
+<div align="center">
+
+| 🎛️ Entity | 📋 Command Topic | 📋 Payload |
+|---|---|---|
+| **📱 Screen Power** | `.../set/screen` | ON / OFF |
+| **💤 Screensaver** | `.../set/screensaver` | ON / OFF |
+| **👁️ Always-on Motion Detection** | `.../set/motion_always_on` | ON / OFF |
+
+</div>
+
+#### 🔘 Buttons (14)
+
+<div align="center">
+
+| 🎛️ Entity | 📋 Command Topic | 🎨 Icon |
+|---|---|---|
+| **🔄 Reload** | `.../set/reload` | mdi:reload |
+| **⏰ Wake** | `.../set/wake` | mdi:alarm |
+| **🔄 Reboot** | `.../set/reboot` | mdi:restart |
+| **🗑️ Clear Cache** | `.../set/clear_cache` | mdi:delete-sweep |
+| **🔒 Lock** | `.../set/lock` | mdi:lock |
+| **⬆️ Remote Up** | `.../set/remote_up` | mdi:arrow-up-bold |
+| **⬇️ Remote Down** | `.../set/remote_down` | mdi:arrow-down-bold |
+| **⬅️ Remote Left** | `.../set/remote_left` | mdi:arrow-left-bold |
+| **➡️ Remote Right** | `.../set/remote_right` | mdi:arrow-right-bold |
+| **✅ Remote Select** | `.../set/remote_select` | mdi:radiobox-marked |
+| **⬅️ Remote Back** | `.../set/remote_back` | mdi:arrow-left-circle |
+| **🏠 Remote Home** | `.../set/remote_home` | mdi:home |
+| **📋 Remote Menu** | `.../set/remote_menu` | mdi:menu |
+| **⏯️ Remote Play/Pause** | `.../set/remote_playpause` | mdi:play-pause |
+
+</div>
+
+#### 📝 Text (6)
+
+<div align="center">
+
+| 🎛️ Entity | 📋 Command Topic | 📝 Description |
+|---|---|---|
+| **🌐 Navigate URL** | `.../set/url` | Navigate WebView to a URL |
+| **🗣️ Text to Speech** | `.../set/tts` | Speak text aloud on the tablet |
+| **💬 Toast Message** | `.../set/toast` | Show a toast notification on screen |
+| **⌨️ Keyboard Key** | `.../set/keyboard_key` | Press a single key (e.g. `enter`, `a`, `f5`) |
+| **⌨️ Keyboard Combo** | `.../set/keyboard_combo` | Press a key combination (e.g. `ctrl+c`, `alt+f4`) |
+| **⌨️ Keyboard Text** | `.../set/keyboard_text` | Type a text string into focused field |
+
+</div>
+
+**📊 Total: 42 entities** auto-discovered in Home Assistant.
 
 ---
 
-## Command Reference
+## 🎮 Command Reference
 
 Commands are sent by publishing to `{baseTopic}/{topicId}/set/{entity}`.
 
-| Topic Suffix | Command | Payload | Description |
-|-------------|---------|---------|-------------|
-| `brightness` | setBrightness | `0-100` (integer) | Set screen brightness |
-| `volume` | setVolume | `0-100` (integer) | Set media volume |
-| `screen` | screenOn / screenOff | `ON` / `OFF` | Turn screen on or off |
-| `screensaver` | screensaverOn / screensaverOff | `ON` / `OFF` | Enable/disable screensaver |
-| `motion_always_on` | setMotionAlwaysOn | `ON` / `OFF` | Toggle always-on motion detection |
-| `reload` | reload | any | Reload WebView |
-| `wake` | wake | any | Wake from screensaver |
-| `reboot` | reboot | any | Reboot device (Device Owner required) |
-| `clear_cache` | clearCache | any | Clear WebView cache |
-| `lock` | lockDevice | any | Lock device screen |
-| `url` | setUrl | URL string | Navigate to URL |
-| `tts` | tts | text string | Text-to-speech (handled natively) |
-| `toast` | toast | text string | Show toast notification (handled natively) |
-| `launch_app` | launchApp | package name | Launch external app |
-| `execute_js` | executeJs | JS code string | Execute JavaScript in WebView |
-| `audio_play` | audioPlay | JSON `{"url":"...","loop":false,"volume":50}` | Play audio from URL |
-| `audio_stop` | audioStop | any | Stop audio playback |
-| `audio_beep` | audioBeep | any | Play beep sound |
-| `rotation_start` | rotationStart | any | Start URL rotation |
-| `rotation_stop` | rotationStop | any | Stop URL rotation |
-| `restart_ui` | restartUi | any | Restart app UI |
-| `remote_up` | remoteKey (up) | `PRESS` | D-pad Up |
-| `remote_down` | remoteKey (down) | `PRESS` | D-pad Down |
-| `remote_left` | remoteKey (left) | `PRESS` | D-pad Left |
-| `remote_right` | remoteKey (right) | `PRESS` | D-pad Right |
-| `remote_select` | remoteKey (select) | `PRESS` | D-pad Select / Enter |
-| `remote_back` | remoteKey (back) | `PRESS` | Back |
-| `remote_home` | remoteKey (home) | `PRESS` | Home |
-| `remote_menu` | remoteKey (menu) | `PRESS` | Menu |
-| `remote_playpause` | remoteKey (playpause) | `PRESS` | Media Play/Pause |
-| `keyboard_key` | keyboardKey | key name (e.g. `enter`, `a`, `f5`) | Press a single key |
-| `keyboard_combo` | keyboardCombo | combo string (e.g. `ctrl+c`) | Press a key combination |
-| `keyboard_text` | keyboardText | text string | Type text into focused field |
+<div align="center">
 
+| 📂 Topic Suffix | 🎮 Command | 📋 Payload | 📝 Description |
+|---|---|---|---|
+| **💡 brightness** | setBrightness | `0-100` (integer) | Set screen brightness |
+| **🔊 volume** | setVolume | `0-100` (integer) | Set media volume |
+| **📱 screen** | screenOn / screenOff | `ON` / `OFF` | Turn screen on or off |
+| **💤 screensaver** | screensaverOn / screensaverOff | `ON` / `OFF` | Enable/disable screensaver |
+| **👁️ motion_always_on** | setMotionAlwaysOn | `ON` / `OFF` | Toggle always-on motion detection |
+| **🔄 reload** | reload | any | Reload WebView |
+| **⏰ wake** | wake | any | Wake from screensaver |
+| **🔄 reboot** | reboot | any | Reboot device (Device Owner required) |
+| **🗑️ clear_cache** | clearCache | any | Clear WebView cache |
+| **🔒 lock** | lockDevice | any | Lock device screen |
+| **🌐 url** | setUrl | URL string | Navigate to URL |
+| **🗣️ tts** | tts | text string | Text-to-speech (handled natively) |
+| **💬 toast** | toast | text string | Show toast notification (handled natively) |
+| **📱 launch_app** | launchApp | package name | Launch external app |
+| **⚙️ execute_js** | executeJs | JS code string | Execute JavaScript in WebView |
+| **🔊 audio_play** | audioPlay | JSON `{"url":"...","loop":false,"volume":50}` | Play audio from URL |
+| **🔇 audio_stop** | audioStop | any | Stop audio playback |
+| **🔔 audio_beep** | audioBeep | any | Play beep sound |
+| **🔄 rotation_start** | rotationStart | any | Start URL rotation |
+| **⏹️ rotation_stop** | rotationStop | any | Stop URL rotation |
+| **🔄 restart_ui** | restartUi | any | Restart app UI |
+| **⬆️ remote_up** | remoteKey (up) | `PRESS` | D-pad Up |
+| **⬇️ remote_down** | remoteKey (down) | `PRESS` | D-pad Down |
+| **⬅️ remote_left** | remoteKey (left) | `PRESS` | D-pad Left |
+| **➡️ remote_right** | remoteKey (right) | `PRESS` | D-pad Right |
+| **✅ remote_select** | remoteKey (select) | `PRESS` | D-pad Select / Enter |
+| **⬅️ remote_back** | remoteKey (back) | `PRESS` | Back |
+| **🏠 remote_home** | remoteKey (home) | `PRESS` | Home |
+| **📋 remote_menu** | remoteKey (menu) | `PRESS` | Menu |
+| **⏯️ remote_playpause** | remoteKey (playpause) | `PRESS` | Media Play/Pause |
+| **⌨️ keyboard_key** | keyboardKey | key name (e.g. `enter`, `a`, `f5`) | Press a single key |
+| **⌨️ keyboard_combo** | keyboardCombo | combo string (e.g. `ctrl+c`) | Press a key combination |
+| **⌨️ keyboard_text** | keyboardText | text string | Type text into focused field |
+
+</div>
+
+> [!NOTE]
 > Commands have full parity with the [REST API](REST-API). Both interfaces dispatch through the same native command handler. Remote control and keyboard commands are handled natively via the AccessibilityService (cross-app) or Activity key dispatch (in-app). TTS and Toast are also handled natively (no JS round-trip).
 
 ---
 
-## Motion Detection
+## 👁️ Motion Detection
 
 FreeKiosk can detect motion using the device camera and report it as a binary sensor in Home Assistant.
 
-**Default behavior**: Motion detection only runs during screensaver (to wake the screen on movement).
+<div align="center">
 
-**Always-on mode**: Enable "Always-on Motion Detection" in MQTT settings or via the HA switch entity to run motion detection continuously. The `motion_detected` binary sensor will update in real-time. Note: this uses the camera continuously and increases battery usage.
+| 🎯 Mode | 📋 Behavior | 🔋 Battery Impact |
+|---|---|---|
+| **💤 Default** | Motion detection only runs during screensaver (to wake the screen on movement) | Minimal |
+| **👁️ Always-on** | Continuous motion detection via HA switch or MQTT setting | Higher |
 
+</div>
+
+**🔧 Always-on mode**: Enable "Always-on Motion Detection" in MQTT settings or via the HA switch entity to run motion detection continuously. The `motion_detected` binary sensor will update in real-time. Note: this uses the camera continuously and increases battery usage.
+
+> [!NOTE]
 > Camera permission must be granted for motion detection to work. FreeKiosk requests this permission automatically on first launch.
 
 ---
 
-## Connection Behavior
+## 🔄 Connection Behavior
 
-### Auto-reconnect
+### 🔄 Auto-reconnect
+
 The MQTT client automatically reconnects when the connection is lost (WiFi drop, broker restart). On reconnect, it:
-1. Publishes `"online"` to the availability topic
-2. Re-publishes all 42 HA Discovery configs
-3. Re-subscribes to command topics
-4. Resumes periodic status publishing
+<div align="center">
 
-### LWT (Last Will and Testament)
+| 📋 Step | 🎯 Action |
+|---|---|
+| **1️⃣ Publish Online** | Publishes `"online"` to the availability topic |
+| **2️⃣ HA Discovery** | Re-publishes all 42 HA Discovery configs |
+| **3️⃣ Subscribe** | Re-subscribes to command topics |
+| **4️⃣ Resume Publishing** | Resumes periodic status publishing |
+
+</div>
+
+### 📱 LWT (Last Will and Testament)
+
 If the connection is lost unexpectedly, the broker publishes `"offline"` to the availability topic. Home Assistant will show the device as "Unavailable".
 
-### Concurrent with REST API
+### 🌐 Concurrent with REST API
+
 MQTT and the REST API can run simultaneously. Both use the same internal command handler and status data. Enabling MQTT does not disable the REST API.
 
 ---
 
-## Testing with MQTT CLI
+## 🧪 Testing with MQTT CLI
+
+<div align="center">
 
 ```bash
 # Subscribe to all FreeKiosk topics
@@ -348,15 +439,20 @@ mosquitto_pub -h BROKER_IP -t "freekiosk/TOPIC_ID/set/motion_always_on" -m "ON"
 mosquitto_sub -h BROKER_IP -t "homeassistant/#" -v
 ```
 
+</div>
+
 Replace `BROKER_IP` with your MQTT broker IP and `TOPIC_ID` with the device name (e.g. `lobby`) or Android ID if no name is configured.
 
 ---
 
-## Home Assistant Examples
+## 🏠 Home Assistant Examples
 
-### Automations
+### 🤖 Automations
 
-#### Wake tablet on room motion
+#### 🏃 Wake tablet on room motion
+
+<div align="center">
+
 ```yaml
 automation:
   - alias: "Wake Tablet on Room Motion"
@@ -375,7 +471,12 @@ automation:
           payload: "PRESS"
 ```
 
-#### Turn off tablet screen at night
+</div>
+
+#### 🌙 Turn off tablet screen at night
+
+<div align="center">
+
 ```yaml
 automation:
   - alias: "Tablet Screen Off at Night"
@@ -389,7 +490,12 @@ automation:
           payload: "OFF"
 ```
 
-#### Turn on tablet screen in the morning
+</div>
+
+#### 🌅 Turn on tablet screen in the morning
+
+<div align="center">
+
 ```yaml
 automation:
   - alias: "Tablet Screen On in Morning"
@@ -403,7 +509,12 @@ automation:
           payload: "ON"
 ```
 
-#### Doorbell alert on tablet
+</div>
+
+#### 🔔 Doorbell alert on tablet
+
+<div align="center">
+
 ```yaml
 automation:
   - alias: "Doorbell Alert on Tablet"
@@ -426,7 +537,12 @@ automation:
           payload: "http://homeassistant:8123/lovelace/cameras"
 ```
 
-#### Adjust brightness based on room light
+</div>
+
+#### 💡 Adjust brightness based on room light
+
+<div align="center">
+
 ```yaml
 automation:
   - alias: "Tablet Auto Brightness via MQTT"
@@ -441,7 +557,12 @@ automation:
             {{ (states('sensor.living_room_light_level') | float / 10) | int | min(100) }}
 ```
 
-#### TTS announcement
+</div>
+
+#### 🗣️ TTS announcement
+
+<div align="center">
+
 ```yaml
 automation:
   - alias: "Announce Weather on Tablet"
@@ -455,7 +576,11 @@ automation:
           payload: "Good morning! Today's forecast is {{ states('weather.home') }}."
 ```
 
-### Dashboard Card (Lovelace)
+</div>
+
+### 📊 Dashboard Card (Lovelace)
+
+<div align="center">
 
 ```yaml
 type: entities
@@ -479,62 +604,135 @@ entities:
   - entity: button.freekiosk_abc123_reboot
 ```
 
----
-
-## Troubleshooting
-
-### Device not appearing in Home Assistant
-1. Verify MQTT integration is configured in HA
-2. Check that the broker URL is correct and reachable from the tablet
-3. Check that MQTT Discovery is enabled in HA (Settings > Integrations > MQTT > Configure)
-4. Use `mosquitto_sub -h BROKER_IP -t "homeassistant/#" -v` to verify discovery messages are being published
-
-### Entities showing "Unknown"
-- Wait for the first status publish (up to 30 seconds by default)
-- Check the state topic: `mosquitto_sub -h BROKER_IP -t "freekiosk/TOPIC_ID/state"`
-- For binary sensors, ensure the state JSON contains the expected boolean fields
-- TTS and Toast entities always show empty — this is by design (fire-and-forget commands)
-
-### Connection keeps dropping
-- Check WiFi stability on the tablet
-- Verify broker allows the configured client ID
-- Check if another client is using the same client ID (use a unique one)
-- The client auto-reconnects automatically — brief disconnections are normal
-
-### Screen Power switch flips back to ON
-- This is resolved in the latest version. Ensure you're running v1.2.12+
-- The tablet immediately publishes updated state after executing screen on/off commands
-
-### Motion detection not working
-- Grant camera permission to the app (requested automatically on first launch)
-- By default, motion only activates during screensaver. Enable "Always-on Motion Detection" for continuous detection
-- Check logs: `adb logcat | grep MotionDetection`
-
-### WiFi SSID showing "WiFi" instead of real name
-- Grant location permissions (requested automatically on first launch)
-- Android requires location permissions to read WiFi SSID (Android 8.0+)
-
-### TTS not speaking
-- Ensure the device has a TTS engine installed (most Android devices include Google TTS)
-- Check device volume is not muted
-- TTS is handled natively by the MQTT module — no need for the REST API to be running
+</div>
 
 ---
 
-## Technical Details
+## 🚨 Troubleshooting
 
-- **MQTT Library**: HiveMQ MQTT Client (`com.hivemq:hivemq-mqtt-client:1.3.12`)
-- **Connection**: Automatic reconnect with exponential backoff
-- **Clean Session**: Yes (no persistent subscriptions)
-- **Keep Alive**: 30 seconds
-- **Thread Safety**: MQTT callbacks are dispatched to the main thread via `Handler(Looper.getMainLooper())`
-- **Password Storage**: Encrypted in Android Keychain (same as REST API key)
-- **TTS & Toast**: Handled natively in the MQTT module (no JS round-trip)
+### 📱 Device not appearing in Home Assistant
+
+<div align="center">
+
+| 🔍 Check | ✅ Solution |
+|---|---|
+| **MQTT Integration** | Verify MQTT integration is configured in HA |
+| **Broker Reachability** | Check broker URL is correct and reachable from tablet |
+| **Discovery Enabled** | Check MQTT Discovery is enabled in HA (Settings > Integrations > MQTT > Configure) |
+| **Discovery Messages** | Use `mosquitto_sub -h BROKER_IP -t "homeassistant/#" -v` to verify discovery messages |
+
+</div>
+
+### ❓ Entities showing "Unknown"
+
+<div align="center">
+
+| 🔍 Issue | ✅ Solution |
+|---|---|
+| **First Status Publish** | Wait for the first status publish (up to 30 seconds by default) |
+| **State Topic** | Check: `mosquitto_sub -h BROKER_IP -t "freekiosk/TOPIC_ID/state"` |
+| **Binary Sensors** | Ensure state JSON contains expected boolean fields |
+| **TTS/Toast** | These always show empty — this is by design (fire-and-forget commands) |
+
+</div>
+
+### 🔄 Connection keeps dropping
+
+<div align="center">
+
+| 🔍 Cause | ✅ Solution |
+|---|---|
+| **WiFi Stability** | Check WiFi stability on the tablet |
+| **Client ID Conflict** | Verify broker allows the configured client ID |
+| **Duplicate Client** | Check if another client is using the same client ID |
+| **Normal Behavior** | The client auto-reconnects automatically — brief disconnections are normal |
+
+</div>
+
+### 📱 Screen Power switch flips back to ON
+
+<div align="center">
+
+| 🔍 Issue | ✅ Solution |
+|---|---|
+| **Version Bug** | This is resolved in the latest version. Ensure you're running v1.2.12+ |
+| **State Update** | The tablet immediately publishes updated state after executing screen on/off commands |
+
+</div>
+
+### 👁️ Motion detection not working
+
+<div align="center">
+
+| 🔍 Issue | ✅ Solution |
+|---|---|
+| **Camera Permission** | Grant camera permission to the app (requested automatically on first launch) |
+| **Default Behavior** | By default, motion only activates during screensaver |
+| **Always-on Mode** | Enable "Always-on Motion Detection" for continuous detection |
+| **Debug Logs** | Check logs: `adb logcat | grep MotionDetection` |
+
+</div>
+
+### 📶 WiFi SSID showing "WiFi" instead of real name
+
+<div align="center">
+
+| 🔍 Issue | ✅ Solution |
+|---|---|
+| **Location Permission** | Grant location permissions (requested automatically on first launch) |
+| **Android Requirement** | Android requires location permissions to read WiFi SSID (Android 8.0+) |
+
+</div>
+
+### 🗣️ TTS not speaking
+
+<div align="center">
+
+| 🔍 Issue | ✅ Solution |
+|---|---|
+| **TTS Engine** | Ensure the device has a TTS engine installed (most Android devices include Google TTS) |
+| **Volume** | Check device volume is not muted |
+| **Native Handling** | TTS is handled natively by the MQTT module — no need for the REST API to be running |
+
+</div>
 
 ---
 
-## See Also
+## 🔧 Technical Details
 
-- [REST API Documentation](REST-API) — HTTP-based integration (polling)
-- [ADB Configuration Guide](ADB-Configuration) — Headless provisioning via ADB
-- [Installation Guide](Installation) — Device setup
+<div align="center">
+
+| ⚙️ Component | 📋 Details |
+|---|---|
+| **📚 MQTT Library** | HiveMQ MQTT Client (`com.hivemq:hivemq-mqtt-client:1.3.12`) |
+| **🔄 Connection** | Automatic reconnect with exponential backoff |
+| **🧹 Clean Session** | Yes (no persistent subscriptions) |
+| **💓 Keep Alive** | 30 seconds |
+| **🧵 Thread Safety** | MQTT callbacks are dispatched to the main thread via `Handler(Looper.getMainLooper())` |
+| **🔐 Password Storage** | Encrypted in Android Keychain (same as REST API key) |
+| **🗣️ TTS & Toast** | Handled natively in the MQTT module (no JS round-trip) |
+
+</div>
+
+---
+
+## 🔗 See Also
+
+<div align="center">
+
+| 📚 Document | 🎯 Focus |
+|---|---|
+| **🌐 REST API Documentation** | HTTP-based integration (polling) |
+| **⌨️ ADB Configuration Guide** | Headless provisioning via ADB |
+| **🔧 Installation Guide** | Device setup |
+| **🔌 Integrations Overview** | Comparison of integration methods |
+
+</div>
+
+---
+
+<div align="center">
+
+**Made with ❤️ by [FreeKiosk Team](https://freekiosk.app)**
+
+</div>

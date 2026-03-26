@@ -2,38 +2,54 @@
 
 # 🌐 FreeKiosk REST API Documentation
 
-_Control, monitor, and automate kiosks over HTTP with JSON responses._
+**Control, monitor, and automate kiosks over HTTP with JSON responses**
 
 <p>
-  <a href="README.md">Docs Home</a> •
-  <a href="INTEGRATIONS.md">Integrations</a> •
-  <a href="MQTT.md">MQTT</a>
+  <a href="README.md">📚 Docs Home</a> •
+  <a href="INTEGRATIONS.md">🔌 Integrations</a> •
+  <a href="MQTT.md">📡 MQTT</a>
 </p>
 
 </div>
 
 FreeKiosk includes a built-in REST API server for integration with **Home Assistant** and other smart home platforms.
 
-## Overview
+## 📋 Overview
 
-- **Default Port**: 8080
-- **Protocol**: HTTP (HTTPS planned)
-- **Authentication**: Optional API Key (X-Api-Key header)
-- **Format**: JSON responses
+<div align="center">
+
+| ⚙️ Feature | 📋 Details |
+|---|---|
+| **🔌 Default Port** | 8080 |
+| **🌐 Protocol** | HTTP (HTTPS planned) |
+| **🔐 Authentication** | Optional API Key (X-Api-Key header) |
+| **📄 Format** | JSON responses |
+
+</div>
 
 > [!NOTE]
 > Some API features require **Device Owner mode** for full functionality (true screen off, reboot). The HTTP server remains accessible even when the screen is off (v1.2.4+). See [Installation Guide](installation.md#advanced-install-device-owner-mode) for Device Owner setup instructions.
 
-## Enabling the API
+## 🔧 Enabling the API
 
-### Via UI
-1. Open FreeKiosk Settings (5-tap on secret button → PIN)
-2. Go to **Advanced** tab
-3. Enable **REST API**
-4. Configure port and optional API key
-5. Save settings
+### 📱 Via UI
 
-### Via ADB (Headless)
+<div align="center">
+
+| 📋 Step | 🎯 Action |
+|---|---|
+| **1️⃣ Access Settings** | 5-tap on secret button → PIN |
+| **2️⃣ Advanced Tab** | Go to **Advanced** tab |
+| **3️⃣ Enable API** | Enable **REST API** |
+| **4️⃣ Configure** | Set port and optional API key |
+| **5️⃣ Save** | Save settings |
+
+</div>
+
+### ⌨️ Via ADB (Headless)
+
+<div align="center">
+
 ```bash
 adb shell am start -n com.freekiosk/.MainActivity \
     --es pin "1234" \
@@ -42,16 +58,22 @@ adb shell am start -n com.freekiosk/.MainActivity \
     --es rest_api_key "your_secret_key"
 ```
 
-See [ADB Configuration Guide](ADB-Configuration) for full headless provisioning.
+</div>
+
+> [!NOTE]
+> See [ADB Configuration Guide](ADB-Configuration) for full headless provisioning.
 
 ---
 
-## Endpoints Reference
+## 🔗 Endpoints Reference
 
-### Status & Info (GET)
+### 📊 Status & Info (GET)
 
 #### `GET /api/status`
+
 Returns complete device status in one call.
+
+<div align="center">
 
 ```json
 {
@@ -73,7 +95,12 @@ Returns complete device status in one call.
 }
 ```
 
+</div>
+
 #### `GET /api/battery`
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -89,17 +116,28 @@ Returns complete device status in one call.
 }
 ```
 
-**Fields:**
-- `level`: Battery percentage (0-100)
-- `charging`: Whether the device is charging
-- `plugged`: Power source: `usb`, `ac`, `wireless`, or `none`
-- `temperature`: Battery temperature in °C
-- `voltage`: Battery voltage in V
-- `health`: `good`, `overheat`, `dead`, `over_voltage`, `failure`, `cold`, or `unknown`
-- `technology`: Battery chemistry (e.g., `Li-ion`)
+</div>
+
+**📋 Fields:**
+<div align="center">
+
+| 📋 Field | 📏 Range/Type | 📝 Description |
+|---|---|---|
+| **🔋 level** | 0-100 | Battery percentage |
+| **🔌 charging** | boolean | Whether the device is charging |
+| **🔌 plugged** | string | Power source: `usb`, `ac`, `wireless`, or `none` |
+| **🌡️ temperature** | number | Battery temperature in °C |
+| **⚡ voltage** | number | Battery voltage in V |
+| **💚 health** | string | `good`, `overheat`, `dead`, `over_voltage`, `failure`, `cold`, or `unknown` |
+| **🧪 technology** | string | Battery chemistry (e.g., `Li-ion`) |
+
+</div>
 ```
 
 #### `GET /api/brightness`
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -107,8 +145,14 @@ Returns complete device status in one call.
 }
 ```
 
+</div>
+
 #### `GET /api/screen`
+
 Returns screen status with separated physical and overlay states.
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -120,17 +164,31 @@ Returns screen status with separated physical and overlay states.
 }
 ```
 
-**Field Descriptions:**
-- `on`: Physical screen state from `PowerManager.isInteractive`
-  - `true` = screen is physically on (consuming power)
-  - `false` = screen is physically off (power button pressed or `lockNow()` called)
-  - Note: Returns `true` even when screensaver overlay is active
-- `brightness`: Current brightness percentage (0-100)
-- `screensaverActive`: Whether the screensaver overlay is showing
-  - `true` = screensaver overlay is covering content (screen may be dimmed)
-  - `false` = normal content is visible
+</div>
 
-**Interpreting Combined States:**
+**📝 Field Descriptions:**
+<div align="center">
+
+| 📋 Field | 📋 Value | 📝 Description |
+|---|---|---|
+| **📱 on** | `true`/`false` | Physical screen state from `PowerManager.isInteractive` |
+| **💡 brightness** | 0-100 | Current brightness percentage |
+| **💤 screensaverActive** | `true`/`false` | Whether the screensaver overlay is showing |
+
+</div>
+
+**📱 Physical Screen State (`on`):**
+- `true` = screen is physically on (consuming power)
+- `false` = screen is physically off (power button pressed or `lockNow()` called)
+- Note: Returns `true` even when screensaver overlay is active
+
+**💤 Screensaver State (`screensaverActive`):**
+- `true` = screensaver overlay is covering content (screen may be dimmed)
+- `false` = normal content is visible
+
+**🔄 Interpreting Combined States:**
+<div align="center">
+
 ```javascript
 // Screen physically on + content visible
 { "on": true, "screensaverActive": false }
@@ -142,13 +200,19 @@ Returns screen status with separated physical and overlay states.
 { "on": false, "screensaverActive": false }
 ```
 
-**Use Cases:**
+</div>
+
+**🎯 Use Cases:**
 - To check if screen is consuming power: `on === true`
 - To check if content is visible to user: `on === true && screensaverActive === false`
 - To check if in power-saving mode: `on === false || screensaverActive === true`
 
 #### `GET /api/sensors`
+
 Returns light, proximity, and accelerometer data.
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -160,7 +224,12 @@ Returns light, proximity, and accelerometer data.
 }
 ```
 
+</div>
+
 #### `GET /api/storage`
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -173,7 +242,12 @@ Returns light, proximity, and accelerometer data.
 }
 ```
 
+</div>
+
 #### `GET /api/memory`
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -187,7 +261,12 @@ Returns light, proximity, and accelerometer data.
 }
 ```
 
+</div>
+
 #### `GET /api/wifi`
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -200,8 +279,14 @@ Returns light, proximity, and accelerometer data.
 }
 ```
 
+</div>
+
 #### `GET /api/info`
+
 Device information.
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -215,12 +300,24 @@ Device information.
 }
 ```
 
-**Field Descriptions:**
-- `isDeviceOwner`: Whether the app has Device Owner privileges (required for reboot, lock, true screen off)
-- `kioskMode`: Whether kiosk lock task mode is currently active
+</div>
+
+**📝 Field Descriptions:**
+<div align="center">
+
+| 📋 Field | 📋 Type | 📝 Description |
+|---|---|---|
+| **🏢 isDeviceOwner** | boolean | Whether the app has Device Owner privileges (required for reboot, lock, true screen off) |
+| **🔒 kioskMode** | boolean | Whether kiosk lock task mode is currently active |
+
+</div>
 
 #### `GET /api/health`
+
 Simple health check.
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -228,12 +325,17 @@ Simple health check.
 }
 ```
 
+</div>
+
 #### `GET /api/screenshot`
+
 Returns a PNG image of the current screen.
 
-**Response**: `image/png` binary data
+**📄 Response**: `image/png` binary data
 
-**Usage examples:**
+**🎯 Usage examples:**
+<div align="center">
+
 ```bash
 # Save screenshot to file
 curl http://TABLET_IP:8080/api/screenshot -o screenshot.png
@@ -242,33 +344,48 @@ curl http://TABLET_IP:8080/api/screenshot -o screenshot.png
 <img src="http://TABLET_IP:8080/api/screenshot" />
 ```
 
+</div>
+
 > 💡 The screenshot is captured from the app's root view. It works even when the screensaver overlay is active.
 
 #### `GET /api/camera/photo`
+
 📷 Take a photo using the device camera. **(v1.2.5+)**
 
-**Query Parameters:**
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `camera` | `back` | Camera to use: `front` or `back` |
-| `quality` | `80` | JPEG compression quality (1-100) |
+**📋 Query Parameters:**
+<div align="center">
 
-**Example:**
+| 📋 Parameter | 🔧 Default | 📝 Description |
+|---|---|---|
+| **📷 camera** | `back` | Camera to use: `front` or `back` |
+| **🎨 quality** | `80` | JPEG compression quality (1-100) |
+
+</div>
+
+**📝 Examples:**
+<div align="center">
+
 ```
 GET /api/camera/photo?camera=back&quality=80
 GET /api/camera/photo?camera=front&quality=60
 ```
 
-**Response**: `image/jpeg` binary data
+</div>
 
-**Notes:**
+**📄 Response**: `image/jpeg` binary data
+
+**📝 Notes:**
 - First capture may take 1-2 seconds (camera initialization + auto-exposure)
 - Camera permission must be granted (already included in app permissions)
 - Photo resolution is automatically optimized (~1.2MP) for fast HTTP transfer
 - Higher quality values produce larger files
 
 #### `GET /api/camera/list`
+
 List available cameras on the device. **(v1.2.5+)**
+
+<div align="center">
+
 ```json
 {
   "success": true,
@@ -280,6 +397,8 @@ List available cameras on the device. **(v1.2.5+)**
   }
 }
 ```
+
+</div>
 
 ---
 

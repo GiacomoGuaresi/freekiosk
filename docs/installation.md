@@ -2,12 +2,12 @@
 
 # 🚀 FreeKiosk Installation Guide
 
-_Complete path from first install to full Device Owner lockdown._
+**Complete path from first install to full Device Owner lockdown**
 
 <p>
-  <a href="README.md">Docs Home</a> •
-  <a href="features-and-modes.md">Modes</a> •
-  <a href="adb-configuration.md">ADB Configuration</a>
+  <a href="README.md">📚 Docs Home</a> •
+  <a href="features-and-modes.md">🎛️ Modes</a> •
+  <a href="adb-configuration.md">⌨️ ADB Configuration</a>
 </p>
 
 </div>
@@ -17,338 +17,464 @@ _Complete path from first install to full Device Owner lockdown._
 
 ---
 
-## Table of Contents
+## 📋 Table of Contents
 
-- [Quick Install (Basic Mode)](#quick-install-basic-mode)
-- [Advanced Install (Device Owner Mode)](#advanced-install-device-owner-mode)
-- [Troubleshooting](#troubleshooting)
-- [Uninstall](#uninstall)
+<div align="center">
 
----
+| 📖 Section | 🎯 Focus |
+|---|---|
+| **🚀 Quick Install** | Basic mode setup without PC |
+| **🏢 Advanced Install** | Device Owner full lockdown |
+| **🚨 Troubleshooting** | Common issues and solutions |
+| **🔧 Remove Device Owner** | How to uninstall properly |
 
-## Quick Install (Basic Mode)
-
-### Requirements
-- Android tablet 8.0+
-- APK file from [Releases](https://github.com/rushb-fr/freekiosk/releases)
-
-### Steps
-
-1. **Download APK**
-   - Go to [Releases](https://github.com/rushb-fr/freekiosk/releases)
-   - Download `FreeKiosk-v1.0.0.apk`
-
-2. **Install**
-   - Transfer APK to tablet (USB, email, download)
-   - Open APK file
-   - Allow "Install from unknown sources" if asked
-   - Install
-
-3. **Configure**
-   - Open FreeKiosk
-   - Tap 5 times on the secret button (default: bottom-right)
-   - Enter settings
-   - Set your URL
-   - Set PIN code
-
-4. **Start Kiosk Mode**
-   - Tap "Start Kiosk Mode"
-   - Done!
-
-⚠️ **Note**: Basic mode allows some system interactions (notifications, back button in some cases).
+</div>
 
 ---
 
-## Advanced Install (Device Owner Mode)
+## 🚀 Quick Install (Basic Mode)
 
-For **complete lockdown** with no system interruptions.
+Perfect for testing, personal use, or when you don't have a PC available.
 
-### Requirements
-- Android 8.0+ tablet
-- Windows/Mac/Linux PC
-- USB cable
-- ADB tool (15 MB)
+### 📋 Requirements
 
-### Step 1: Install ADB
+<div align="center">
+
+| ⚙️ Requirement | 📋 Details |
+|---|---|
+| **📱 Android Tablet** | Version 8.0+ (API 26+) |
+| **📥 APK File** | Download from [Releases](https://github.com/rushb-fr/freekiosk/releases) |
+| **🔐 PIN Code** | Choose 4-6 digits for security |
+
+</div>
+
+### 🔧 Installation Steps
+
+<div align="center">
+
+| 📋 Step | 🎯 Action | 📝 Details |
+|---|---|---|
+| **1️⃣ Download** | Get the APK | From [GitHub Releases](https://github.com/rushb-fr/freekiosk/releases) |
+| **2️⃣ Install** | Transfer & Install | USB, email, or direct download |
+| **3️⃣ Configure** | Set URL & PIN | 5-tap secret button (bottom-right) |
+| **4️⃣ Launch** | Start Kiosk | Tap "Start Kiosk Mode" |
+
+</div>
+
+### 📱 Detailed Instructions
+
+**Step 1: Download APK**
+1. Go to [Releases](https://github.com/rushb-fr/freekiosk/releases)
+2. Download the latest `FreeKiosk-vX.X.X.apk`
+3. Transfer to tablet via USB, email, or direct download
+
+**Step 2: Install**
+1. Open the APK file on tablet
+2. Allow "Install from unknown sources" if prompted
+3. Complete installation
+
+**Step 3: Configure**
+1. Open FreeKiosk app
+2. Tap 5 times on secret button (default: bottom-right corner)
+3. Enter settings with your PIN
+4. Set your target URL
+5. Configure additional settings as needed
+
+**Step 4: Start Kiosk**
+1. Tap "Start Kiosk Mode"
+2. Your tablet is now in basic kiosk mode!
+
+> [!WARNING]
+> Basic mode allows some system interactions (notifications, back button access in some cases). For complete lockdown, use Device Owner mode.
+
+---
+
+## 🏢 Advanced Install (Device Owner Mode)
+
+For **complete lockdown** with no system interruptions. Perfect for public displays, corporate kiosks, and secure deployments.
+
+### 📋 Requirements
+
+<div align="center">
+
+| ⚙️ Requirement | 📋 Details |
+|---|---|
+| **📱 Android Tablet** | Version 8.0+ (API 26+) |
+| **💻 Computer** | Windows, Mac, or Linux |
+| **🔌 USB Cable** | For tablet connection |
+| **🛠️ ADB Tool** | Android Debug Bridge (15 MB) |
+
+</div>
+
+### 📥 Step 1: Install ADB
 
 Choose your operating system:
 
 #### 🪟 Windows
 
+<div align="center">
+
 1. Download [SDK Platform Tools](https://dl.google.com/android/repository/platform-tools-latest-windows.zip) (15 MB)
 2. Extract to `C:\platform-tools\`
-3. Done!
+3. Open Command Prompt and navigate to the directory
+
+</div>
 
 #### 🍎 Mac
 
+<div align="center">
+
 **Option A: Homebrew** (recommended)
+```bash
 brew install android-platform-tools
-
-
+```
 
 **Option B: Manual**
 1. Download [SDK Platform Tools](https://dl.google.com/android/repository/platform-tools-latest-darwin.zip)
 2. Extract and add to PATH
 
+</div>
+
 #### 🐧 Linux
 
+<div align="center">
+
 **Ubuntu/Debian:**
+```bash
 sudo apt install adb
-
-
+```
 
 **Fedora:**
+```bash
 sudo dnf install android-tools
+```
 
+</div>
 
+### 📱 Step 2: Prepare Tablet
 
----
-
-### Step 2: Prepare Tablet
-
-#### 1. Remove All Accounts
+#### 🔐 1. Remove All Accounts
 
 Device Owner requires that **no user accounts** are active on the device. A factory reset is **not** required.
 
-1. Go to **Settings → Accounts**
-2. Remove **every** account (Google, Samsung, Microsoft 365, etc.)
-3. Remove your SIM card or disable the SIM profile — Android may keep a SIM-linked account active
-4. Verify: Settings → Accounts should show **no accounts**
+<div align="center">
 
-⚠️ **IMPORTANT**: You can sign back into all your accounts **after** Device Owner is activated.
+| 📋 Action | 🎯 Purpose |
+|---|---|
+| **🗑️ Remove Google Accounts** | Settings → Accounts → Google → Remove |
+| **🗑️ Remove Samsung Accounts** | Settings → Accounts → Samsung → Remove |
+| **🗑️ Remove Microsoft 365** | Settings → Accounts → Work → Remove |
+| **📱 Remove/Disable SIM** | Remove SIM card or disable SIM profile |
+| **✅ Verify** | Settings → Accounts should show "No accounts" |
 
-> **Fallback**: If the `dpm` command still fails after removing accounts (some devices retain hidden accounts after a reboot), perform a factory reset: Settings → System → Reset → Factory data reset. After reset, do **not** add any account before activating Device Owner.
+</div>
 
-#### 2. Enable USB Debugging
+> [!IMPORTANT]
+> You can sign back into all your accounts **after** Device Owner is activated.
 
-- Settings → About tablet
-- Tap "Build number" **7 times** (Developer mode enabled)
-- Go back → Settings → System → Developer options
-- Enable **"USB debugging"**
+> [!NOTE]
+> **Fallback**: If the `dpm` command still fails after removing accounts (some devices retain hidden accounts), perform a factory reset: Settings → System → Reset → Factory data reset. After reset, do **not** add any account before activating Device Owner.
 
-#### 3. Install FreeKiosk
+#### 🔧 2. Enable USB Debugging
 
-- Transfer APK to tablet
-- Install the APK
-- Do NOT open yet
+<div align="center">
 
----
+| 📋 Step | 🎯 Action |
+|---|---|
+| **1️⃣ Developer Mode** | Settings → About tablet → Tap "Build number" 7 times |
+| **2️⃣ USB Debugging** | Settings → System → Developer options → Enable "USB debugging" |
 
-### Step 3: Activate Device Owner
+</div>
 
-#### 1. Connect Tablet to PC
+#### 📥 3. Install FreeKiosk
 
-- Use USB cable
-- Tablet will show "Allow USB debugging?" popup
-- Check "Always allow from this computer"
-- Tap "Allow"
+1. Transfer APK to tablet
+2. Install the APK
+3. **Do NOT open yet** - wait for Device Owner activation
 
-#### 2. Verify Connection
+### 🎯 Step 3: Activate Device Owner
+
+#### 🔌 1. Connect Tablet to PC
+
+<div align="center">
+
+| 📋 Action | 🎯 Details |
+|---|---|
+| **🔌 Connect USB** | Use USB cable to connect tablet to PC |
+| **📱 Allow Debugging** | Check "Always allow from this computer" |
+| **✅ Tap Allow** | Accept the USB debugging popup |
+
+</div>
+
+#### 🔍 2. Verify Connection
+
+<div align="center">
 
 **Windows:**
+```bash
 cd C:\platform-tools
 adb devices
-
-
+```
 
 **Mac/Linux:**
+```bash
 adb devices
+```
 
-
-
-You should see:
+**Expected output:**
+```
 List of devices attached
 ABC123XYZ device
-
-
+```
 
 If you see "unauthorized" → Check tablet screen for popup
 
-#### 3. Set Device Owner
+</div>
+
+#### 🏢 3. Set Device Owner
+
+<div align="center">
 
 **Run this command:**
+```bash
 adb shell dpm set-device-owner com.freekiosk/.DeviceAdminReceiver
-
-
+```
 
 **Expected output:**
+```
 Success: Device owner set to package com.freekiosk
 Active admin set to component {com.freekiosk/com.freekiosk.DeviceAdminReceiver}
-
-
+```
 
 ✅ **Success!** Your tablet is now in Device Owner mode.
 
-#### 4. Reboot (optional)
+</div>
 
+#### 🔄 4. Reboot (Optional)
+
+```bash
 adb reboot
+```
 
+### 🚀 Step 4: Launch FreeKiosk
 
+<div align="center">
 
----
+| 📋 Step | 🎯 Action |
+|---|---|
+| **1️⃣ Open App** | Launch FreeKiosk from app drawer |
+| **2️⃣ Configure** | Set URL and PIN in settings |
+| **3️⃣ Start Kiosk** | Tap "Start Kiosk Mode" |
+| **4️⃣ Complete** | Full lockdown is now active! |
 
-### Step 4: Launch FreeKiosk
-
-1. Open FreeKiosk app
-2. Configure URL and PIN
-3. Start kiosk mode
-4. Done! Complete lockdown active.
-
----
-
-## What's the Difference?
-
-| Feature | Basic Mode | Device Owner Mode |
-|---------|-----------|-------------------|
-| Kiosk lockdown | Partial | Complete |
-| System notifications | Visible | Blocked |
-| Status bar | May appear | Hidden |
-| Navigation buttons | Accessible | Disabled |
-| Home button | May work | Disabled |
-| Recent apps | Accessible | Disabled |
-| Samsung popups | Can appear | Blocked |
-| Exit without PIN | Possible (long press) | Impossible |
-| Auto-start on boot | Yes | Yes |
-| **Recommended for** | Testing, personal use | Production, public displays |
+</div>
 
 ---
 
-## Troubleshooting
+## ⚖️ What's the Difference?
 
-### "adb: command not found" (Windows)
+<div align="center">
 
-**Cause**: Not in platform-tools directory
+| 🔒 Feature | 🟢 Basic Mode | 🔴 Device Owner Mode |
+|---|---|---|
+| **🚪 Kiosk Lockdown** | Partial | Complete |
+| **🔔 System Notifications** | Visible | Blocked |
+| **📊 Status Bar** | May appear | Hidden |
+| **⬅️ Navigation Buttons** | Accessible | Disabled |
+| **🏠 Home Button** | May work | Disabled |
+| **📱 Recent Apps** | Accessible | Disabled |
+| **📱 Samsung Popups** | Can appear | Blocked |
+| **🚪 Exit Without PIN** | Possible (long press) | Impossible |
+| **🚀 Auto-start on Boot** | Yes | Yes |
+| **🎯 Recommended For** | Testing, personal use | Production, public displays |
 
-**Solution**:
-cd C:\platform-tools
-adb devices
+</div>
 
+---
 
+## 🚨 Troubleshooting
 
-### "Not allowed to set the device owner"
+### ❌ "adb: command not found" (Windows)
 
-**Cause**: One or more user accounts exist on the device (Google, Samsung, Microsoft, SIM profile, etc.)
+<div align="center">
 
-**Solution**:
-1. Go to Settings → Accounts and remove **all** accounts
-2. Remove SIM card or disable SIM profile (Android may keep a hidden SIM account)
-3. Try the Device Owner command again
-4. **Fallback**: If it still fails, factory reset the tablet and do **not** add any account before running the command
+| 🔍 Cause | ✅ Solution |
+|---|---|
+| **Not in platform-tools directory** | `cd C:\platform-tools` then `adb devices` |
 
-### "No devices/emulators found"
+</div>
 
-**Causes**:
-- USB cable not connected
-- USB debugging not enabled
-- Driver issues (Windows)
+### 🚫 "Not allowed to set the device owner"
 
-**Solutions**:
-1. Check USB cable is connected
-2. Verify USB debugging is enabled
-3. Check tablet screen for "Allow USB debugging?" popup
-4. Run `adb devices` to verify connection
-5. **Windows**: Install [USB drivers](https://developer.android.com/studio/run/oem-usb)
+<div align="center">
 
-### Tablet not recognized (Windows)
+| 🔍 Cause | ✅ Solution |
+|---|---|
+| **User accounts exist** | Remove ALL accounts (Google, Samsung, Microsoft, SIM) |
+| **Hidden SIM account** | Remove SIM card or disable SIM profile |
+| **Device-specific accounts** | Factory reset and try again (no accounts added) |
 
-**Solution**: Install manufacturer's USB drivers
-- Samsung: [Samsung USB Driver](https://developer.samsung.com/android-usb-driver)
-- Other brands: Search "[Brand] USB driver for Windows"
+</div>
 
-### "Error: Not enough permissions" (Linux)
+### 🔌 "No devices/emulators found"
 
-**Solution**:
+<div align="center">
+
+| 🔍 Cause | ✅ Solution |
+|---|---|
+| **USB not connected** | Check USB cable connection |
+| **USB debugging disabled** | Enable in Developer Options |
+| **Driver issues (Windows)** | Install [USB drivers](https://developer.android.com/studio/run/oem-usb) |
+| **Popup not accepted** | Check tablet screen for "Allow USB debugging" popup |
+
+</div>
+
+### 📱 Tablet not recognized (Windows)
+
+<div align="center">
+
+**Install manufacturer USB drivers:**
+
+| 🏭 Brand | 🔗 Driver Link |
+|---|---|
+| **Samsung** | [Samsung USB Driver](https://developer.samsung.com/android-usb-driver) |
+| **Other Brands** | Search "[Brand] USB driver for Windows" |
+
+</div>
+
+### 🔒 "Error: Not enough permissions" (Linux)
+
+<div align="center">
+
+**Quick fix:**
+```bash
 sudo adb kill-server
 sudo adb start-server
 adb devices
+```
 
-
-
-Or configure udev rules (permanent fix):
+**Permanent fix (udev rules):**
+```bash
 sudo nano /etc/udev/rules.d/51-android.rules
-
-Add: SUBSYSTEM=="usb", ATTR{idVendor}=="[vendor_id]", MODE="0666", GROUP="plugdev"
+```
+Add: `SUBSYSTEM=="usb", ATTR{idVendor}=="[vendor_id]", MODE="0666", GROUP="plugdev"`
+```bash
 sudo udevadm control --reload-rules
+```
 
+</div>
 
+### 🔐 Device Owner set but kiosk doesn't lock completely
 
-### Device Owner set but kiosk doesn't lock completely
+<div align="center">
 
-**Solution**:
-1. Reboot tablet
-2. Open FreeKiosk
-3. Go to Settings (5 taps bottom-right)
-4. Tap "Exit Kiosk Mode" then "Start Kiosk Mode" again
+| 📋 Step | 🎯 Action |
+|---|---|
+| **1️⃣ Reboot** | Restart the tablet |
+| **2️⃣ Restart Kiosk** | Exit and start kiosk mode again |
+| **3️⃣ Check Settings** | Verify Device Owner is active |
+
+</div>
 
 ---
 
-## Remove Device Owner
+## 🔧 Remove Device Owner
 
-### Option 1: Via FreeKiosk App
+### 📱 Option 1: Via FreeKiosk App
 
-1. Tap 5 times on the secret button (default: bottom-right)
-2. Enter your PIN
-3. Tap "⚠️ Remove Device Owner" button (NOT "Exit Kiosk Mode")
-4. Confirm the action
-5. Device Owner is removed and all settings are reset
+<div align="center">
 
-⚠️ **Note**: "Exit Kiosk Mode" only closes the app but keeps Device Owner active.
+| 📋 Step | 🎯 Action |
+|---|---|
+| **1️⃣ Access Settings** | Tap 5 times on secret button (bottom-right) |
+| **2️⃣ Enter PIN** | Authenticate with your PIN code |
+| **3️⃣ Remove Device Owner** | Tap "⚠️ Remove Device Owner" button |
+| **4️⃣ Confirm** | Confirm the action in the dialog |
+| **5️⃣ Complete** | Device Owner removed and settings reset |
 
-### Option 2: Via ADB
+</div>
 
+> [!WARNING]
+> "Exit Kiosk Mode" only closes the app but keeps Device Owner active. Use "Remove Device Owner" to completely disable.
+
+### ⌨️ Option 2: Via ADB
+
+<div align="center">
+
+```bash
 adb shell dpm remove-active-admin com.freekiosk/.DeviceAdminReceiver
+```
 
+</div>
+---
+
+## 🗑️ Uninstall
+
+### 🏢 If Device Owner is Active
+
+<div align="center">
+
+| 📋 Step | 🎯 Action |
+|---|---|
+| **1️⃣ Remove Device Owner** | Follow steps above |
+| **2️⃣ Uninstall App** | Standard uninstall procedure |
+
+</div>
+
+### 📱 Standard Uninstall
+
+<div align="center">
+
+Settings → Apps → FreeKiosk → Uninstall
+
+</div>
 
 ---
 
-## Uninstall
+## ❓ FAQ
 
-### If Device Owner is Active
+<div align="center">
 
-1. Remove Device Owner first (see above)
-2. Then uninstall normally
+| ❓ Question | ✅ Answer |
+|---|---|
+| **🔓 Do I need to root my tablet?** | No! FreeKiosk uses Android's official Device Owner API (no root required). |
+| **🟢 Can I use FreeKiosk without Device Owner?** | Yes! Basic mode works without Device Owner, but lockdown is not complete. |
+| **🛡️ Does Device Owner void my warranty?** | No. Device Owner is an official Android feature. No modifications are made to the system. |
+| **📱 Can I have multiple apps in Device Owner mode?** | No. Android allows only ONE Device Owner per device. FreeKiosk must be the only one. |
+| **🔄 Can I still use my tablet normally after removing Device Owner?** | Yes! Just exit kiosk mode and uninstall. Your tablet returns to normal state. |
+| **🔥 Does it work on Fire tablets (Amazon)?** | Should work, but not officially tested. Device Owner setup may differ. |
 
-### Standard Uninstall
-
-- Settings → Apps → FreeKiosk → Uninstall
-
----
-
-## FAQ
-
-**Q: Do I need to root my tablet?**  
-A: No! FreeKiosk uses Android's official Device Owner API (no root required).
-
-**Q: Can I use FreeKiosk without Device Owner?**  
-A: Yes! Basic mode works without Device Owner, but lockdown is not complete.
-
-**Q: Does Device Owner void my warranty?**  
-A: No. Device Owner is an official Android feature. No modifications are made to the system.
-
-**Q: Can I have multiple apps in Device Owner mode?**  
-A: No. Android allows only ONE Device Owner per device. FreeKiosk must be the only one.
-
-**Q: Can I still use my tablet normally after removing Device Owner?**  
-A: Yes! Just exit kiosk mode and uninstall. Your tablet returns to normal state.
-
-**Q: Does it work on Fire tablets (Amazon)?**  
-A: Should work, but not officially tested. Device Owner setup may differ.
+</div>
 
 ---
 
-## Video Tutorial
+## 🎥 Video Tutorial
+
+<div align="center">
 
 🎥 Coming soon! Subscribe to [Rushb YouTube](https://youtube.com/@rushb) for updates.
 
----
-
-## Need Help?
-
-- 📖 Check [FAQ](FAQ)
-- 💬 Open a [Discussion](https://github.com/rushb-fr/freekiosk/discussions)
-- 🐛 Report a [Bug](https://github.com/rushb-fr/freekiosk/issues)
-- 📧 Email: support@freekiosk.app
+</div>
 
 ---
 
-**Made with ❤️ by [Rushb](https://rushb.io)**
+## 🆘 Need Help?
+
+<div align="center">
+
+| � Resource | 🔗 Link |
+|---|---|
+| **📖 FAQ** | [FAQ](FAQ) |
+| **💬 Discussions** | [GitHub Discussions](https://github.com/rushb-fr/freekiosk/discussions) |
+| **🐛 Bug Reports** | [GitHub Issues](https://github.com/rushb-fr/freekiosk/issues) |
+| **📧 Email Support** | support@freekiosk.app |
+
+</div>
+
+---
+
+<div align="center">
+
+**Made with ❤️ by [FreeKiosk Team](https://freekiosk.app)**
+
+</div>
