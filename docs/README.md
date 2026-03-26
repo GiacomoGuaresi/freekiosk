@@ -15,7 +15,6 @@ _Complete guides for deployment, automation, and integration_
 
 </div>
 
----
 
 ## What is FreeKiosk?
 
@@ -49,7 +48,6 @@ FreeKiosk is a **free, open-source kiosk platform** for Android tablets. It's de
 | **MQTT + HA Discovery** | Yes | No |
 | **Cloud Management** | Roadmap | Yes |
 
----
 
 ## Quick Start
 
@@ -71,7 +69,6 @@ adb shell dpm set-device-owner com.freekiosk/.DeviceAdminReceiver
 > [!TIP]
 > See the complete [Installation Guide](Installation) for detailed setup instructions.
 
----
 
 ## Documentation Guide
 
@@ -100,7 +97,6 @@ adb shell dpm set-device-owner com.freekiosk/.DeviceAdminReceiver
 | **Roadmap & Changelog** | Release notes and future plans | [Read →](Roadmap-and-Changelog) |
 | **Wiki Sync** | How documentation is published | [Read →](Pipeline-and-Wiki-Sync) |
 
----
 
 ## Common Use Cases
 
@@ -134,7 +130,6 @@ adb shell am start -n com.freekiosk/.MainActivity \
     --es rest_api_port "8080"
 ```
 
----
 
 ## Resources
 
@@ -144,7 +139,6 @@ adb shell am start -n com.freekiosk/.MainActivity \
 - **Discussions:** [Community Forum](https://github.com/rushb-fr/freekiosk/discussions)
 - **Support:** support@freekiosk.app
 
----
 
 ## Contributing
 
@@ -154,7 +148,6 @@ FreeKiosk is open source and welcomes contributions!
 - **Documentation:** Submit PRs to improve these docs
 - **Feedback:** Share your use case in [Discussions](https://github.com/rushb-fr/freekiosk/discussions)
 
----
 
 <div align="center">
 

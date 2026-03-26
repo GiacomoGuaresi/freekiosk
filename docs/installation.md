@@ -4,7 +4,6 @@
 
 [Docs Home](README) • [Features](Features-and-Modes) • [ADB Config](ADB-Configuration)
 
----
 
 > [!TIP]
 > For production deployments or public-facing tablets, go directly to [Device Owner Mode](#device-owner-mode-advanced).
@@ -18,7 +17,6 @@
 - [Removing Device Owner](#-removing-device-owner)
 - [Uninstall](#-uninstall)
 
----
 
 ## Basic Mode (No PC Required)
 
@@ -56,7 +54,6 @@
 > [!WARNING]
 > Basic mode allows some system interactions (notifications, back button). For complete lockdown, use Device Owner mode below.
 
----
 
 ## Device Owner Mode (Advanced)
 
@@ -189,7 +186,6 @@ adb reboot
 3. Tap "Start Kiosk Mode"
 4. Full lockdown is now active!
 
----
 
 ## What's the Difference?
 
@@ -206,7 +202,6 @@ adb reboot
 | **Auto-start on Boot** | Yes | Yes |
 | **Recommended For** | Testing, personal | Production, public |
 
----
 
 ## Troubleshooting
 
@@ -272,7 +267,6 @@ sudo udevadm control --reload-rules
 2. Exit and restart kiosk mode
 3. Verify Device Owner is active
 
----
 
 ## Removing Device Owner
 
@@ -293,7 +287,6 @@ sudo udevadm control --reload-rules
 adb shell dpm remove-active-admin com.freekiosk/.DeviceAdminReceiver
 ```
 
----
 
 ## Uninstall
 
@@ -306,7 +299,6 @@ adb shell dpm remove-active-admin com.freekiosk/.DeviceAdminReceiver
 
 Settings → Apps → FreeKiosk → Uninstall
 
----
 
 ## Quick FAQ
 
@@ -328,7 +320,6 @@ Yes! Just remove Device Owner and uninstall.
 **Does it work on Fire tablets (Amazon)?**
 Should work, but not officially tested.
 
----
 
 ## Need Help?
 
@@ -337,6 +328,5 @@ Should work, but not officially tested.
 - **Bug Reports:** [GitHub Issues](https://github.com/rushb-fr/freekiosk/issues)
 - **Email:** support@freekiosk.app
 
----
 
 **Made with ❤️ by [Rushb](https://rushb.fr)**

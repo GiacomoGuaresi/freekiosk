@@ -4,7 +4,6 @@
 
 [Docs Home](README) • [REST API](REST-API) • [MQTT](MQTT)
 
----
 
 > [!IMPORTANT]
 > REST API and MQTT can run simultaneously on the same device.
@@ -17,7 +16,6 @@
 - [Headless Setup](#headless-setup)
 - [Choosing Your Integration](#choosing-your-integration)
 
----
 
 ## Integration Channels
 
@@ -38,7 +36,6 @@ FreeKiosk offers two main integration methods:
 | **Availability** | HTTP status | LWT |
 | **Security** | API key | Username/password |
 
----
 
 ## REST API
 
@@ -78,7 +75,6 @@ curl -H "X-Api-Key: your-key" http://tablet-ip:8080/api/screenshot -o screenshot
 > [!TIP]
 > See the complete [REST API Reference](REST-API) for all endpoints.
 
----
 
 ## MQTT
 
@@ -121,7 +117,6 @@ freekiosk/lobby/set/url              # Navigate to URL
 > [!TIP]
 > See the complete [MQTT Reference](MQTT) for topics and commands.
 
----
 
 ## Headless Setup
 
@@ -179,7 +174,6 @@ adb shell am start -n com.freekiosk/.MainActivity \
 > [!NOTE]
 > See the complete [ADB Configuration Guide](ADB-Configuration) for all parameters.
 
----
 
 ## Choosing Your Integration
 
@@ -204,7 +198,6 @@ Use both for maximum flexibility:
 - **REST API** - On-demand commands and media capture
 - **ADB** - Initial provisioning and bulk configuration
 
----
 
 ## Related Documentation
 
@@ -214,6 +207,5 @@ Use both for maximum flexibility:
 - **Installation:** [Device setup guide](Installation)
 - **FAQ:** [Common questions](FAQ)
 
----
 
 **Made with ❤️ by [Rushb](https://rushb.fr)**

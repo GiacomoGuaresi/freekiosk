@@ -4,7 +4,6 @@
 
 [Docs Home](README)
 
----
 
 > [!WARNING]
 > The `docs/` folder is the source of truth. Manual wiki edits will be overwritten.
@@ -40,7 +39,6 @@ Repository docs/  →  GitHub Wiki
 > [!WARNING]
 > This is a one-way sync. Manual wiki edits will be overwritten on next sync.
 
----
 
 ## Best Practices
 
@@ -49,7 +47,6 @@ Repository docs/  →  GitHub Wiki
 - **Proper formatting** - Use GitHub-flavored Markdown
 - **Update links** - Use relative links between docs
 
----
 ## Troubleshooting
 
 ### Common Issues
@@ -73,7 +70,6 @@ Repository docs/  →  GitHub Wiki
 1. Go to Actions tab
 2. Re-run failed jobs
 
----
 
 ## Technical Details
 
@@ -100,7 +96,6 @@ cd wiki && git add . && git commit -m "Sync docs" && git push
 | `docs/*.md` | `*.md` | Documentation pages |
 | `docs/screenshots/` | `screenshots/` | Images |
 
----
 
 ## Resources
 
@@ -108,7 +103,6 @@ cd wiki && git add . && git commit -m "Sync docs" && git push
 - **GitHub Wiki Docs:** [docs.github.com/en/wikis](https://docs.github.com/en/wikis)
 - **GitHub Actions:** [docs.github.com/en/actions](https://docs.github.com/en/actions)
 
----
 
 **Made with ❤️ by [Rushb](https://rushb.fr)**
 

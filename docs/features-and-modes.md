@@ -4,7 +4,6 @@
 
 [Docs Home](README) • [Installation](Installation) • [Integrations](Integrations)
 
----
 
 > [!TIP]
 > Choose your operational mode first, then proceed to [Installation](Installation) and [Integrations](Integrations).
@@ -16,7 +15,6 @@
 - [Provisioning & Operations](#-provisioning--operations)
 - [Choosing Your Mode](#-choosing-your-mode)
 
----
 
 ## Display Modes
 
@@ -90,7 +88,6 @@
 > [!NOTE]
 > See [Roadmap and Changelog](Roadmap-and-Changelog) for detailed release information.
 
----
 
 ## Security & Control
 
@@ -111,7 +108,6 @@
 - **PIN Protection** - Secure settings access
 - **Screen Pinning** - Task locking policies
 
----
 
 ## Provisioning & Operations
 
@@ -132,7 +128,6 @@
 - **Remote Control** - REST API and MQTT automation
 - **Mass Deployment** - Configure multiple devices via scripts
 
----
 
 ## Choosing Your Mode
 
@@ -172,7 +167,6 @@ adb shell am start -n com.freekiosk/.MainActivity \
     --es rest_api_enabled "true"
 ```
 
----
 
 ## Next Steps
 
@@ -181,7 +175,6 @@ adb shell am start -n com.freekiosk/.MainActivity \
 - **ADB Provisioning:** [Headless deployment](ADB-Configuration)
 - **FAQ:** [Common questions](FAQ)
 
----
 
 **Made with ❤️ by [Rushb](https://rushb.fr)**
 
