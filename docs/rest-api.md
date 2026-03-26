@@ -1,62 +1,62 @@
 
 
-# 🌐 FreeKiosk REST API Documentation
+# FreeKiosk REST API Documentation
 
 **Control, monitor, and automate kiosks over HTTP with JSON responses**
 
 <p>
-  <a href="README.md">📚 Docs Home</a> •
-  <a href="INTEGRATIONS.md">🔌 Integrations</a> •
-  <a href="MQTT.md">📡 MQTT</a>
+  <a href="README.md">Docs Home</a> •
+  <a href="INTEGRATIONS.md">Integrations</a> •
+  <a href="MQTT.md">MQTT</a>
 </p>
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [📖 Overview](#overview)
-- [🔧 Configuration](#configuration)
-- [🚀 Getting Started](#getting-started)
-- [📋 Features](#features)
-- [🚨 Troubleshooting](#troubleshooting)
-- [🔗 Related Resources](#related-resources)
+- [Overview](#overview)
+- [Configuration](#configuration)
+- [Getting Started](#getting-started)
+- [Features](#features)
+- [Troubleshooting](#troubleshooting)
+- [Related Resources](#related-resources)
 
 
 
 
 FreeKiosk includes a built-in REST API server for integration with **Home Assistant** and other smart home platforms.
 
-## 📋 Overview
+## Overview
 
 
 
-| ⚙️ Feature | 📋 Details |
+| Feature | Details |
 |---|---|
-| **🔌 Default Port** | 8080 |
-| **🌐 Protocol** | HTTP (HTTPS planned) |
-| **🔐 Authentication** | Optional API Key (X-Api-Key header) |
-| **📄 Format** | JSON responses |
+| **Default Port** | 8080 |
+| **Protocol** | HTTP (HTTPS planned) |
+| **Authentication** | Optional API Key (X-Api-Key header) |
+| **Format** | JSON responses |
 
 
 
 > [!NOTE]
 > Some API features require **Device Owner mode** for full functionality (true screen off, reboot). The HTTP server remains accessible even when the screen is off (v1.2.4+). See [Installation Guide](installation.md#advanced-install-device-owner-mode) for Device Owner setup instructions.
 
-## 🔧 Enabling the API
+## Enabling the API
 
-### 📱 Via UI
+### Via UI
 
 
 
-| 📋 Step | 🎯 Action |
+| Step | Action |
 |---|---|
-| **1️⃣ Access Settings** | 5-tap on secret button → PIN |
-| **2️⃣ Advanced Tab** | Go to **Advanced** tab |
-| **3️⃣ Enable API** | Enable **REST API** |
-| **4️⃣ Configure** | Set port and optional API key |
-| **5️⃣ Save** | Save settings |
+| **1** | 5-tap on secret button → PIN |
+| **2** | Go to **Advanced** tab |
+| **3** | Toggle **Enable REST API** |
+| **4** | Set port (default: 8080) and optional API key |
+| **5** | Save settings |
 
 
 
-### ⌨️ Via ADB (Headless)
+### Via ADB (Headless)
 
 
 
@@ -74,9 +74,9 @@ adb shell am start -n com.freekiosk/.MainActivity \
 > See [ADB Configuration Guide](ADB-Configuration) for full headless provisioning.
 
 
-## 🔗 Endpoints Reference
+## Endpoints Reference
 
-### 📊 Status & Info (GET)
+### Status & Info (GET)
 
 #### `GET /api/status`
 
@@ -130,15 +130,15 @@ Returns complete device status in one call.
 **📋 Fields:**
 
 
-| 📋 Field | 📏 Range/Type | 📝 Description |
+| Field | Range/Type | Description |
 |---|---|---|
-| **🔋 level** | 0-100 | Battery percentage |
-| **🔌 charging** | boolean | Whether the device is charging |
-| **🔌 plugged** | string | Power source: `usb`, `ac`, `wireless`, or `none` |
-| **🌡️ temperature** | number | Battery temperature in °C |
-| **⚡ voltage** | number | Battery voltage in V |
-| **💚 health** | string | `good`, `overheat`, `dead`, `over_voltage`, `failure`, `cold`, or `unknown` |
-| **🧪 technology** | string | Battery chemistry (e.g., `Li-ion`) |
+| **level** | 0-100 | Battery percentage |
+| **charging** | boolean | Whether the device is charging |
+| **plugged** | string | Power source: `usb`, `ac`, `wireless`, or `none` |
+| **temperature** | number | Battery temperature in °C |
+| **voltage** | number | Battery voltage in V |
+| **health** | string | `good`, `overheat`, `dead`, `over_voltage`, `failure`, `cold`, or `unknown` |
+| **technology** | string | Battery chemistry (e.g., `Li-ion`) |
 
 
 ```
@@ -175,27 +175,27 @@ Returns screen status with separated physical and overlay states.
 
 
 
-**📝 Field Descriptions:**
+**Field Descriptions:**
 
 
-| 📋 Field | 📋 Value | 📝 Description |
+| Field | Value | Description |
 |---|---|---|
-| **📱 on** | `true`/`false` | Physical screen state from `PowerManager.isInteractive` |
-| **💡 brightness** | 0-100 | Current brightness percentage |
-| **💤 screensaverActive** | `true`/`false` | Whether the screensaver overlay is showing |
+| **on** | `true`/`false` | Physical screen state from `PowerManager.isInteractive` |
+| **brightness** | 0-100 | Current brightness percentage |
+| **screensaverActive** | `true`/`false` | Whether the screensaver overlay is showing |
 
 
 
-**📱 Physical Screen State (`on`):**
+**Physical Screen State (`on`):**
 - `true` = screen is physically on (consuming power)
 - `false` = screen is physically off (power button pressed or `lockNow()` called)
 - Note: Returns `true` even when screensaver overlay is active
 
-**💤 Screensaver State (`screensaverActive`):**
+**Screensaver State (`screensaverActive`):**
 - `true` = screensaver overlay is covering content (screen may be dimmed)
 - `false` = normal content is visible
 
-**🔄 Interpreting Combined States:**
+**Interpreting Combined States:**
 
 
 ```javascript
@@ -211,7 +211,7 @@ Returns screen status with separated physical and overlay states.
 
 
 
-**🎯 Use Cases:**
+**Use Cases:**
 - To check if screen is consuming power: `on === true`
 - To check if content is visible to user: `on === true && screensaverActive === false`
 - To check if in power-saving mode: `on === false || screensaverActive === true`
@@ -311,13 +311,13 @@ Device information.
 
 
 
-**📝 Field Descriptions:**
+**Field Descriptions:**
 
 
-| 📋 Field | 📋 Type | 📝 Description |
+| Field | Type | Description |
 |---|---|---|
-| **🏢 isDeviceOwner** | boolean | Whether the app has Device Owner privileges (required for reboot, lock, true screen off) |
-| **🔒 kioskMode** | boolean | Whether kiosk lock task mode is currently active |
+| **isDeviceOwner** | boolean | Whether the app has Device Owner privileges (required for reboot, lock, true screen off) |
+| **kioskMode** | boolean | Whether kiosk lock task mode is currently active |
 
 
 
@@ -340,9 +340,9 @@ Simple health check.
 
 Returns a PNG image of the current screen.
 
-**📄 Response**: `image/png` binary data
+**Response**: `image/png` binary data
 
-**🎯 Usage examples:**
+**Usage examples:**
 
 
 ```bash
@@ -359,19 +359,19 @@ curl http://TABLET_IP:8080/api/screenshot -o screenshot.png
 
 #### `GET /api/camera/photo`
 
-📷 Take a photo using the device camera. **(v1.2.5+)**
+Take a photo using the device camera. **(v1.2.5+)**
 
-**📋 Query Parameters:**
+**Query Parameters:**
 
 
-| 📋 Parameter | 🔧 Default | 📝 Description |
+| Parameter | Default | Description |
 |---|---|---|
-| **📷 camera** | `back` | Camera to use: `front` or `back` |
-| **🎨 quality** | `80` | JPEG compression quality (1-100) |
+| **camera** | `back` | Camera to use: `front` or `back` |
+| **quality** | `80` | JPEG compression quality (1-100) |
 
 
 
-**📝 Examples:**
+**Examples:**
 
 
 ```
@@ -381,9 +381,9 @@ GET /api/camera/photo?camera=front&quality=60
 
 
 
-**📄 Response**: `image/jpeg` binary data
+**Response**: `image/jpeg` binary data
 
-**📝 Notes:**
+**Notes:**
 - First capture may take 1-2 seconds (camera initialization + auto-exposure)
 - Camera permission must be granted (already included in app permissions)
 - Photo resolution is automatically optimized (~1.2MP) for fast HTTP transfer
@@ -710,7 +710,7 @@ Response:
 }
 ```
 
-> #### 📱 Accessibility Service (recommended for External App mode)
+> #### Accessibility Service (recommended for External App mode)
 >
 > By default, keyboard emulation only works inside FreeKiosk's WebView. To inject keys into **external apps** (e.g., when using External App display mode), you need to enable the **FreeKiosk Accessibility Service**:
 >
@@ -958,7 +958,7 @@ camera:
     content_type: image/png
 ```
 
-### Device Camera (Photo) 📷
+### Device Camera (Photo)
 
 ```yaml
 camera:
