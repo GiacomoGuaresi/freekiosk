@@ -1039,6 +1039,38 @@ class HttpServerModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
+    /**
+     * Speak text using the native Android TTS engine.
+     * Exposed as a @ReactMethod so the WebView speechSynthesis polyfill can call it
+     * via NativeModules.HttpServerModule.speak() from React Native.
+     */
+    @ReactMethod
+    fun speak(text: String, language: String, promise: Promise) {
+        try {
+            val lang = if (language.isNotEmpty()) language else null
+            speakText(text, lang)
+            promise.resolve(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to speak text", e)
+            promise.reject("TTS_ERROR", e.message)
+        }
+    }
+
+    /**
+     * Stop any ongoing TTS playback.
+     * Used by the WebView speechSynthesis polyfill for cancel().
+     */
+    @ReactMethod
+    fun stopSpeaking(promise: Promise) {
+        try {
+            tts?.stop()
+            promise.resolve(true)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to stop speaking", e)
+            promise.reject("TTS_ERROR", e.message)
+        }
+    }
+
     private fun getStorageInfo(): JSONObject {
         return try {
             val stat = StatFs(Environment.getDataDirectory().path)
