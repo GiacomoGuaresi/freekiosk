@@ -212,14 +212,14 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
     }
   };
 
-  // Générer les options de caméra en fonction des caméras disponibles (dédupliquées par position)
+  // Generate camera options from available cameras (deduplicated by position)
   const uniquePositions = Array.from(new Set(availableCameras.map(cam => cam.position)));
   const cameraOptions = uniquePositions.map(position => ({
     label: position === 'front' ? 'Front Camera' : 'Back Camera',
     value: position,
   }));
 
-  // Vérifier si la caméra sélectionnée est disponible
+  // Check whether the selected camera is available on this device
   const selectedCameraAvailable = availableCameras.some(cam => cam.position === motionCameraPosition);
 
   return (
@@ -410,16 +410,28 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
                 />
 
                 {screensaverType === 'url' && (
-                  <SettingsInput
-                    label="Screensaver URL"
-                    value={screensaverUrl}
-                    onChangeText={onScreensaverUrlChange}
-                    placeholder="https://example.com/clock"
-                    keyboardType="url"
-                    autoCapitalize="none"
-                    hint="The page is shown read-only; tap anywhere to wake"
-                  />
-                )}
+                  <>
+                    <SettingsInput
+                      label="Screensaver URL"
+                      value={screensaverUrl}
+                      onChangeText={onScreensaverUrlChange}
+                      placeholder="https://example.com/clock"
+                      keyboardType="url"
+                      autoCapitalize="none"
+                      hint="The page is shown read-only; tap anywhere to wake"
+                    />
+                    {screensaverUrl.trim().length > 0 && (() => {
+                      try { new URL(screensaverUrl.trim()); return null; } catch {
+                        return (
+                          <SettingsInfoBox variant="error">
+                            <Text style={styles.infoText}>
+                              ⚠️ Invalid URL. Enter a full URL starting with https:// or http://
+                            </Text>
+                          </SettingsInfoBox>
+                        );
+                      }
+                    })()}
+                  </>
 
                 {screensaverType === 'video' && (
                   <>
@@ -461,6 +473,14 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
                       value={screensaverVideoLoop}
                       onValueChange={onScreensaverVideoLoopChange}
                     />
+
+                    {screensaverVideoItems.length === 0 && (
+                      <SettingsInfoBox variant="warning">
+                        <Text style={styles.infoText}>
+                          ⚠️ No media selected. The screensaver will appear blank until you pick at least one item.
+                        </Text>
+                      </SettingsInfoBox>
+                    )}
                   </>
                 )}
 
@@ -580,8 +600,12 @@ const DisplayTab: React.FC<DisplayTabProps> = ({
               <View style={styles.subSection}>
                 <Text style={styles.infoTitle}>ℹ️ How It Works</Text>
                 <Text style={styles.infoText}>
-                  • After {inactivityDelay || '10'} minute(s) without interaction, the screen dims{`
+                  • After {inactivityDelay || '10'} minute(s) without interaction, the screensaver activates{`
 `}
+                  {displayMode === 'external_app'
+                    ? `• FreeKiosk comes to the foreground to show the screensaver; the external app resumes on wake
+`
+                    : ''}
                   • Touch the screen to wake the device{`
 `}
                   {motionEnabled && `• Motion in front of the camera also wakes the screen
