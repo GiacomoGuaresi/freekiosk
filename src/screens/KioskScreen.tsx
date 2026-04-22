@@ -9,7 +9,7 @@ import StatusBar from '../components/StatusBar';
 import MotionDetector from '../components/MotionDetector';
 import ExternalAppOverlay from '../components/ExternalAppOverlay';
 import { StorageService } from '../utils/storage';
-import { saveSecurePin, saveSecureMqttPassword } from '../utils/secureStorage';
+import { saveSecurePin, saveSecureMqttPassword, getSecureBasicAuthPassword } from '../utils/secureStorage';
 import KioskModule from '../utils/KioskModule';
 import AppLauncherModule from '../utils/AppLauncherModule';
 import OverlayServiceModule from '../utils/OverlayServiceModule';
@@ -185,6 +185,8 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [disableUserZoom, setDisableUserZoom] = useState<boolean>(false);
   const [customUserAgent, setCustomUserAgent] = useState<string>('');
+  const [basicAuthUsername, setBasicAuthUsername] = useState<string>('');
+  const [basicAuthPassword, setBasicAuthPassword] = useState<string>('');
 
   // Media Player states
   const [mediaPlayerItems, setMediaPlayerItems] = useState<MediaItem[]>([]);
@@ -602,6 +604,57 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
             console.log('[API] Motion always-on set to', value);
           } catch (error) {
             console.error('[API] Error setting motion always-on:', error);
+          }
+        },
+        onSetMode: async (mode: 'webview' | 'external_app', target?: string) => {
+          if (isNavigatingToPinRef.current) {
+            console.log('[API] setMode ignored: navigateToPin in progress');
+            return;
+          }
+
+          if (mode === 'webview') {
+            // Stop external-app services before switching back to webview
+            try { await OverlayServiceModule.stopOverlayService(); } catch {}
+            try { await AppLauncherModule.stopBackgroundMonitor(); } catch {}
+            setIsAppLaunched(false);
+            setDisplayMode('webview');
+            if (target) {
+              setUrl(target);
+              setBaseUrl(target);
+              setWebViewKey(k => k + 1);
+              await StorageService.saveUrl(target);
+            }
+            console.log('[API] Switched to webview mode', target ?? '');
+
+          } else if (mode === 'external_app' && target) {
+            const isInstalled = await AppLauncherModule.isAppInstalled(target);
+            if (!isInstalled) {
+              console.warn('[API] setMode: app not installed:', target);
+              return;
+            }
+            // Read overlay settings fresh from storage to avoid stale closure
+            const tapCount = await StorageService.getReturnTapCount();
+            const tapTimeout = await StorageService.getReturnTapTimeout();
+            const retMode = await StorageService.getReturnMode();
+            const retPos = await StorageService.getReturnButtonPosition();
+            const autoRelaunch = await StorageService.getAutoRelaunchApp();
+            const allowNotif = await StorageService.getAllowNotifications();
+
+            setDisplayMode('external_app');
+            setExternalAppPackage(target);
+            setExternalAppMode('single');
+            externalAppModeRef.current = 'single';
+
+            try {
+              await OverlayServiceModule.startOverlayService(
+                tapCount, tapTimeout, retMode, retPos, target, autoRelaunch, allowNotif,
+              );
+            } catch (e) {
+              console.warn('[API] setMode: OverlayService start failed:', e);
+            }
+            await AppLauncherModule.launchExternalApp(target);
+            setIsAppLaunched(true);
+            console.log('[API] Switched to external_app mode:', target);
           }
         },
       });
@@ -1504,6 +1557,11 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
       // Load Custom User Agent
       const savedCustomUserAgent = str(K.CUSTOM_USER_AGENT) ?? '';
       setCustomUserAgent(savedCustomUserAgent);
+
+      const savedBasicAuthUsername = str(K.HTTP_BASIC_AUTH_USERNAME) ?? '';
+      const savedBasicAuthPassword = await getSecureBasicAuthPassword();
+      setBasicAuthUsername(savedBasicAuthUsername);
+      setBasicAuthPassword(savedBasicAuthPassword);
       
       // Load Media Player settings
       if (savedDisplayMode === 'media_player') {
@@ -2308,6 +2366,11 @@ const KioskScreen: React.FC<KioskScreenProps> = ({ navigation }) => {
               zoomLevel={zoomLevel}
               disableUserZoom={disableUserZoom}
               customUserAgent={customUserAgent}
+              basicAuthCredential={
+                basicAuthUsername
+                  ? { username: basicAuthUsername, password: basicAuthPassword }
+                  : undefined
+              }
             />
           )}
         </>

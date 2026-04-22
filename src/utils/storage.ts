@@ -149,6 +149,8 @@ const KEYS = {
   // Dashboard
   DASHBOARD_MODE_ENABLED: '@kiosk_dashboard_mode_enabled',
   DASHBOARD_TILES: '@kiosk_dashboard_tiles',
+  // HTTP Basic Auth
+  HTTP_BASIC_AUTH_USERNAME: '@kiosk_http_basic_auth_username',
 };
 
 export const StorageService = {
@@ -370,6 +372,8 @@ export const StorageService = {
         // Dashboard
         KEYS.DASHBOARD_MODE_ENABLED,
         KEYS.DASHBOARD_TILES,
+        // HTTP Basic Auth
+        KEYS.HTTP_BASIC_AUTH_USERNAME,
         // Managed Apps
         KEYS.MANAGED_APPS,
         // Legacy keys
@@ -2461,6 +2465,24 @@ export const StorageService = {
     } catch (error) {
       console.error('Error getting dashboard tiles:', error);
       return [];
+    }
+  },
+
+  saveHttpBasicAuthUsername: async (username: string): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(KEYS.HTTP_BASIC_AUTH_USERNAME, username);
+    } catch (error) {
+      console.error('Error saving HTTP basic auth username:', error);
+    }
+  },
+
+  getHttpBasicAuthUsername: async (): Promise<string> => {
+    try {
+      const value = await AsyncStorage.getItem(KEYS.HTTP_BASIC_AUTH_USERNAME);
+      return value ?? '';
+    } catch (error) {
+      console.error('Error getting HTTP basic auth username:', error);
+      return '';
     }
   },
 

@@ -42,6 +42,7 @@ interface WebViewComponentProps {
   zoomLevel?: number; // Zoom level percentage (50-200, default 100)
   disableUserZoom?: boolean; // Prevent pinch-to-zoom and double-tap zoom
   customUserAgent?: string; // Custom User-Agent string (empty = default modern Chrome UA)
+  basicAuthCredential?: { username: string; password: string };
 }
 
 export interface WebViewComponentRef {
@@ -70,7 +71,8 @@ const WebViewComponent = forwardRef<WebViewComponentRef, WebViewComponentProps>(
   printPaperSize = 'A4',
   zoomLevel = 100,
   disableUserZoom = false,
-  customUserAgent = ''
+  customUserAgent = '',
+  basicAuthCredential,
 }, ref) => {
   const navigation = useNavigation<NavigationProp>();
   const webViewRef = useRef<WebView>(null);
@@ -703,6 +705,7 @@ const WebViewComponent = forwardRef<WebViewComponentRef, WebViewComponentProps>(
         originWhitelist={pdfViewerEnabled ? ['http://*', 'https://*', 'file://*'] : ['http://*', 'https://*']}
         mixedContentMode="always"
         onHttpError={handleHttpError}
+        basicAuthCredential={basicAuthCredential}
 
         onLoadStart={() => {
           // Don't reset error state when loading about:blank (error recovery)

@@ -20,7 +20,7 @@ import {
 import CookieManager from '@react-native-cookies/cookies';
 import { Camera } from 'react-native-vision-camera';
 import { StorageService } from '../../utils/storage';
-import { saveSecurePin, hasSecurePin, clearSecurePin } from '../../utils/secureStorage';
+import { saveSecurePin, hasSecurePin, clearSecurePin, saveSecureBasicAuthPassword, getSecureBasicAuthPassword } from '../../utils/secureStorage';
 import CertificateModuleTyped, { CertificateInfo } from '../../utils/CertificateModule';
 import AppLauncherModule, { AppInfo } from '../../utils/AppLauncherModule';
 import OverlayPermissionModule from '../../utils/OverlayPermissionModule';
@@ -194,6 +194,8 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
 
   // Custom User Agent
   const [customUserAgent, setCustomUserAgent] = useState<string>('');
+  const [basicAuthUsername, setBasicAuthUsername] = useState<string>('');
+  const [basicAuthPassword, setBasicAuthPassword] = useState<string>('');
   
   // Media Player states
   const [mediaPlayerItems, setMediaPlayerItems] = useState<MediaItem[]>([]);
@@ -606,6 +608,11 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
     // Custom User Agent
     const savedCustomUserAgent = await StorageService.getCustomUserAgent();
     setCustomUserAgent(savedCustomUserAgent);
+
+    const savedBasicAuthUsername = await StorageService.getHttpBasicAuthUsername();
+    const savedBasicAuthPassword = await getSecureBasicAuthPassword();
+    setBasicAuthUsername(savedBasicAuthUsername);
+    setBasicAuthPassword(savedBasicAuthPassword);
 
     // Media Player settings
     const savedMediaItems = await StorageService.getMediaPlayerItems();
@@ -1207,6 +1214,8 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
     await StorageService.saveWebViewZoomLevel(zoomLevel);
     await StorageService.saveDisableUserZoom(disableUserZoom);
     await StorageService.saveCustomUserAgent(customUserAgent);
+    await StorageService.saveHttpBasicAuthUsername(basicAuthUsername);
+    await saveSecureBasicAuthPassword(basicAuthPassword);
     await StorageService.saveAllowPowerButton(allowPowerButton);
     await StorageService.saveAllowNotifications(allowNotifications);
     await StorageService.saveAllowSystemInfo(allowSystemInfo);
@@ -1669,6 +1678,10 @@ const SettingsScreenNew: React.FC<SettingsScreenProps> = ({ navigation }) => {
             onMediaPlayerMuteChange={setMediaPlayerMute}
             onPickMediaFromDevice={handlePickMediaFromDevice}
             pickingMedia={pickingMedia}
+            basicAuthUsername={basicAuthUsername}
+            onBasicAuthUsernameChange={setBasicAuthUsername}
+            basicAuthPassword={basicAuthPassword}
+            onBasicAuthPasswordChange={setBasicAuthPassword}
             onBackToKiosk={() => { revokeSettingsAccess(); navigation.reset({ index: 0, routes: [{ name: 'Kiosk' }] }); }}
           />
         );
